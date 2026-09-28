@@ -7,8 +7,8 @@ DERIVED_DATA_PATH ?= /tmp/plyst-derived-data
 .PHONY: lint build test-build verify
 
 lint:
-	swiftlint lint --strict --no-cache --config .swiftlint.yml Plyst/Plyst
-	swiftlint lint --strict --no-cache --config .swiftlint-tests.yml Plyst/PlystTests
+	mise exec -- swiftlint lint --strict --no-cache --config .swiftlint.yml Plyst/Plyst
+	mise exec -- swiftlint lint --strict --no-cache --config .swiftlint-tests.yml Plyst/PlystTests
 
 build:
 	xcodebuild -quiet \
