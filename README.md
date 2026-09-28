@@ -40,10 +40,19 @@ Xcode에서 [Plyst.xcodeproj](Plyst/Plyst.xcodeproj)을 열고 `Plyst` Shared Sc
 Plyst/
 ├── Plyst.xcodeproj/
 ├── Plyst/
-│   ├── AppDelegate.swift
-│   ├── SceneDelegate.swift
-│   ├── ViewController.swift
-│   └── Base.lproj/LaunchScreen.storyboard
+│	├── App/
+│	│	├── AppDelegate.swift
+│	│	└── SceneDelegate.swift
+│	├── Feature/
+│	│	└── Root/
+│	│		├── AppReactor.swift
+│	│		└── ViewController.swift
+│	├── Shared/
+│	│	└── State/
+│	│		├── Reactorable.swift
+│	│		├── ReactorEffect.swift
+│	│		└── ReactorViewController.swift
+│	└── Base.lproj/LaunchScreen.storyboard
 └── PlystTests/
 ```
 
