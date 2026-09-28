@@ -43,6 +43,17 @@ Plyst/
 │	├── App/
 │	│	├── AppDelegate.swift
 │	│	└── SceneDelegate.swift
+│	├── Model/
+│	│	├── Clip.swift
+│	│	├── ClipContent.swift
+│	│	└── ClipImageMetadata.swift
+│	├── Service/
+│	│	└── Clip/
+│	│		├── ClipRepository.swift
+│	│		├── ClipRepositoryEvent.swift
+│	│		├── ClipRepositoryError.swift
+│	│		├── ClipUpdate.swift
+│	│		└── ClipSortOrder.swift
 │	├── Feature/
 │	│	└── Root/
 │	│		├── AppReactor.swift
