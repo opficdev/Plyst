@@ -1,0 +1,46 @@
+name: iOS CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: SwiftLint
+    runs-on: xcode-27
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install SwiftLint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          brew list swiftlint >/dev/null 2>&1 || brew install swiftlint
+          swiftlint version
+
+      - name: Lint
+        run: make lint
+
+  build:
+    name: Build
+    runs-on: xcode-27
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build
+        run: make build
+
+  test-build:
+    name: Test Build
+    runs-on: xcode-27
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build tests
+        run: make test-build
