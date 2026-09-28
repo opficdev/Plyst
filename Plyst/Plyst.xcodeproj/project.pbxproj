@@ -6,6 +6,13 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		DFA00001306A4A9700115D10 /* ReactorKit in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00005306A4A9700115D10 /* ReactorKit */; };
+		DFA00002306A4A9700115D10 /* RxSwift in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00006306A4A9700115D10 /* RxSwift */; };
+		DFA00003306A4A9700115D10 /* ReactorKit in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00007306A4A9700115D10 /* ReactorKit */; };
+		DFA00004306A4A9700115D10 /* RxSwift in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00008306A4A9700115D10 /* RxSwift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		DFEB0A38306A4A9700115D10 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -51,11 +58,15 @@
 		DFEB0A1E306A4A9500115D10 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				DFA00001306A4A9700115D10 /* ReactorKit in Frameworks */,
+				DFA00002306A4A9700115D10 /* RxSwift in Frameworks */,
 			);
 		};
 		DFEB0A34306A4A9700115D10 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				DFA00003306A4A9700115D10 /* ReactorKit in Frameworks */,
+				DFA00004306A4A9700115D10 /* RxSwift in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -96,6 +107,10 @@
 				DFEB0A23306A4A9500115D10 /* Plyst */,
 			);
 			name = Plyst;
+			packageProductDependencies = (
+				DFA00005306A4A9700115D10 /* ReactorKit */,
+				DFA00006306A4A9700115D10 /* RxSwift */,
+			);
 			productName = Plyst;
 			productReference = DFEB0A21306A4A9500115D10 /* Plyst.app */;
 			productType = "com.apple.product-type.application";
@@ -117,6 +132,10 @@
 				DFEB0A3A306A4A9700115D10 /* PlystTests */,
 			);
 			name = PlystTests;
+			packageProductDependencies = (
+				DFA00007306A4A9700115D10 /* ReactorKit */,
+				DFA00008306A4A9700115D10 /* RxSwift */,
+			);
 			productName = PlystTests;
 			productReference = DFEB0A37306A4A9700115D10 /* PlystTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -149,6 +168,10 @@
 			);
 			mainGroup = DFEB0A18306A4A9500115D10;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DFA00009306A4A9700115D10 /* XCRemoteSwiftPackageReference "ReactorKit" */,
+				DFA0000A306A4A9700115D10 /* XCRemoteSwiftPackageReference "RxSwift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DFEB0A22306A4A9500115D10 /* Products */;
 			projectDirPath = "";
@@ -470,6 +493,48 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		DFA00009306A4A9700115D10 /* XCRemoteSwiftPackageReference "ReactorKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ReactorKit/ReactorKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.2.0;
+			};
+		};
+		DFA0000A306A4A9700115D10 /* XCRemoteSwiftPackageReference "RxSwift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ReactiveX/RxSwift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.10.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DFA00005306A4A9700115D10 /* ReactorKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFA00009306A4A9700115D10 /* XCRemoteSwiftPackageReference "ReactorKit" */;
+			productName = ReactorKit;
+		};
+		DFA00006306A4A9700115D10 /* RxSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFA0000A306A4A9700115D10 /* XCRemoteSwiftPackageReference "RxSwift" */;
+			productName = RxSwift;
+		};
+		DFA00007306A4A9700115D10 /* ReactorKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFA00009306A4A9700115D10 /* XCRemoteSwiftPackageReference "ReactorKit" */;
+			productName = ReactorKit;
+		};
+		DFA00008306A4A9700115D10 /* RxSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFA0000A306A4A9700115D10 /* XCRemoteSwiftPackageReference "RxSwift" */;
+			productName = RxSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = DFEB0A19306A4A9500115D10 /* Project object */;
 	validationLevel = 1;
