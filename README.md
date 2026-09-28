@@ -7,7 +7,7 @@
 | 항목 | 버전 |
 | --- | --- |
 | Xcode | 27.0 |
-| iOS Deployment Target | 27.0 |
+| iOS Deployment Target | 17.0 |
 | Swift | 5.0 |
 | SwiftLint | 0.63.3 |
 
