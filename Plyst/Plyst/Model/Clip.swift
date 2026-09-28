@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// An immutable snapshot of a saved clip. Content and creation time do not change after insertion.
+/// 저장된 클립의 불변 스냅샷입니다. 추가 이후 콘텐츠와 생성 시각은 변경되지 않습니다.
 struct Clip: Equatable, Identifiable, Sendable {
 
     let id: UUID
@@ -16,7 +16,7 @@ struct Clip: Equatable, Identifiable, Sendable {
     let isPinned: Bool
     let memo: String?
     let createdAt: Date
-    /// Nil until the clip has been successfully copied again.
+    /// 클립을 다시 복사하는 작업이 성공하기 전까지는 nil입니다.
     let lastUsedAt: Date?
 
     init(
