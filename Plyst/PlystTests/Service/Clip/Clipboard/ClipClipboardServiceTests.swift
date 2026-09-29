@@ -300,16 +300,26 @@ actor ClipClipboardStorageServiceSpy: ClipStorageService {
     private let storage: SQLiteClipStorageService
     private let beforeInsert: @Sendable () throws -> Void
     private let afterInsert: @Sendable () -> Void
+    private let afterFetch: @Sendable () async throws -> Void
+    private let beforeUpdate: @Sendable () async throws -> Void
+    private let afterUpdate: @Sendable () -> Void
     private(set) var insertCount = 0
+    private(set) var updateCount = 0
 
     init(
         storage: SQLiteClipStorageService,
         beforeInsert: @escaping @Sendable () throws -> Void = {},
-        afterInsert: @escaping @Sendable () -> Void = {}
+        afterInsert: @escaping @Sendable () -> Void = {},
+        afterFetch: @escaping @Sendable () async throws -> Void = {},
+        beforeUpdate: @escaping @Sendable () async throws -> Void = {},
+        afterUpdate: @escaping @Sendable () -> Void = {}
     ) {
         self.storage = storage
         self.beforeInsert = beforeInsert
         self.afterInsert = afterInsert
+        self.afterFetch = afterFetch
+        self.beforeUpdate = beforeUpdate
+        self.afterUpdate = afterUpdate
     }
 
     func fetchAll(order: ClipSortOrder) async throws -> [Clip] {
@@ -317,7 +327,9 @@ actor ClipClipboardStorageServiceSpy: ClipStorageService {
     }
 
     func fetch(id: Clip.ID) async throws -> Clip? {
-        try await storage.fetch(id: id)
+        let clip = try await storage.fetch(id: id)
+        try await afterFetch()
+        return clip
     }
 
     func insert(_ clip: Clip) async throws {
@@ -331,7 +343,11 @@ actor ClipClipboardStorageServiceSpy: ClipStorageService {
         id: Clip.ID,
         change: ClipUpdate
     ) async throws -> Clip {
-        try await storage.update(id: id, change: change)
+        updateCount += 1
+        try await beforeUpdate()
+        let clip = try await storage.update(id: id, change: change)
+        afterUpdate()
+        return clip
     }
 
     func delete(id: Clip.ID) async throws {

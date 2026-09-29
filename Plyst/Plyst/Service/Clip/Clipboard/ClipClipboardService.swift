@@ -18,24 +18,27 @@ enum ClipClipboardSaveResult: Equatable, Sendable {
     case invalidImage
 }
 
-/// 사용자 저장 요청에 따라 클립보드를 읽고 클립을 추가합니다. 초기화 시에는 클립보드에 접근하지 않습니다.
+/// 사용자 요청에 따라 클립을 저장하거나 다시 복사합니다. 초기화 시에는 클립보드에 접근하지 않습니다.
 /// storage와 images는 같은 저장소를 사용해야 합니다.
-/// 이미지 루트별로 하나의 ClipImageService를 공유해야 합니다.
+/// 같은 클립보드를 사용하는 호출부는 이 서비스 하나와 이미지 루트별 ClipImageService 하나를 공유해야 합니다.
 actor ClipClipboardService {
     private let storage: any ClipStorageService
     private let images: ClipImageService
     private let reader: any ClipboardReader
+    private let writer: any ClipboardWriter
     private var isBusy = false
     private var waiters = [CheckedContinuation<Void, Never>]()
 
     init(
         storage: any ClipStorageService,
         images: ClipImageService,
-        reader: any ClipboardReader = SystemClipboardReader()
+        reader: any ClipboardReader = SystemClipboardReader(),
+        writer: any ClipboardWriter = SystemClipboardWriter(localOnly: true, expirationDate: nil)
     ) {
         self.storage = storage
         self.images = images
         self.reader = reader
+        self.writer = writer
     }
 
     /// 저장소 오류와 CancellationError는 그대로 전파합니다. 저장 확정 이후에는 취소를 다시 확인하지 않습니다.
@@ -76,6 +79,56 @@ actor ClipClipboardService {
             return .unsupported
         case .accessFailed:
             return .accessFailed
+        }
+    }
+
+    /// 쓰기 전 오류는 전파합니다. 쓰기가 확인된 이후의 사용 시각 저장 실패는 부분 성공으로 반환합니다.
+    func copy(id: Clip.ID) async throws -> ClipClipboardCopyResult {
+        try await acquire()
+        defer { release() }
+        guard let clip = try await storage.fetch(id: id) else { throw ClipStorageError.notFound(id) }
+        let content = try await clipboardContent(for: clip)
+        try Task.checkCancellation()
+        guard try await writer.write(content) == .observed else { return .writeNotObserved(id) }
+        let copiedAt = Date()
+        do {
+            let updated = try await storage.update(id: id, change: .lastUsedAt(copiedAt, matching: clip))
+            guard updated.id == clip.id,
+                  updated.content == clip.content,
+                  updated.createdAt == clip.createdAt else {
+                return .copiedWithoutLastUsedAt(
+                    clip: clip,
+                    copiedAt: copiedAt,
+                    failure: .replaced
+                )
+            }
+            // 갱신 확정 뒤 발생한 취소로 완료된 복사와 사용 기록을 숨기지 않습니다.
+            return .copied(updated)
+        } catch {
+            let failure: ClipClipboardUsageUpdateFailure
+            if error is CancellationError {
+                failure = .cancelled
+            } else if let error = error as? ClipStorageError {
+                failure = .storage(error)
+            } else {
+                failure = .unknown
+            }
+            return .copiedWithoutLastUsedAt(
+                clip: clip,
+                copiedAt: copiedAt,
+                failure: failure
+            )
+        }
+    }
+
+    private func clipboardContent(for clip: Clip) async throws -> ClipboardWriteContent {
+        switch clip.content {
+        case .text(let text):
+            return .text(text)
+        case .image(let image):
+            // 같은 클립 식별자가 재사용돼도 최초 조회한 메타데이터와 다른 원본을 섞지 않습니다.
+            let data = try await images.loadImage(image)
+            return .image(data: data, contentType: image.contentType)
         }
     }
 
