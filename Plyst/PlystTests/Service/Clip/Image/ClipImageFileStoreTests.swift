@@ -156,6 +156,77 @@ final class ClipImageFileStoreTests: XCTestCase {
             XCTAssertEqual($0 as? ClipImageFileError, .notFound(image.fileID))
         }
     }
+
+    func testValidatedLoadPreservesAnimatedOriginalAndMetadata() throws {
+        let files = try ClipImageFileStore(rootURL: root)
+        let data = try ClipImageTestFixture.data(type: UTType.gif.identifier, count: 2)
+        let image = try files.save(data)
+
+        XCTAssertEqual(try files.load(image: image), data)
+        XCTAssertEqual(try files.load(fileID: image.fileID), data)
+        XCTAssertEqual(try files.pendingFileIDs(), [image.fileID])
+    }
+
+    func testValidatedLoadRejectsMismatchedMetadataWithoutChangingOriginal() throws {
+        let files = try ClipImageFileStore(rootURL: root)
+        let data = try ClipImageTestFixture.data()
+        let image = try files.save(data)
+        let mismatches = [
+            ClipImageMetadata(
+                fileID: image.fileID,
+                contentType: UTType.jpeg.identifier,
+                pixelWidth: image.pixelWidth,
+                pixelHeight: image.pixelHeight,
+                byteCount: image.byteCount
+            ),
+            ClipImageMetadata(
+                fileID: image.fileID,
+                contentType: image.contentType,
+                pixelWidth: image.pixelWidth + 1,
+                pixelHeight: image.pixelHeight,
+                byteCount: image.byteCount
+            ),
+            ClipImageMetadata(
+                fileID: image.fileID,
+                contentType: image.contentType,
+                pixelWidth: image.pixelWidth,
+                pixelHeight: image.pixelHeight + 1,
+                byteCount: image.byteCount
+            ),
+            ClipImageMetadata(
+                fileID: image.fileID,
+                contentType: image.contentType,
+                pixelWidth: image.pixelWidth,
+                pixelHeight: image.pixelHeight,
+                byteCount: image.byteCount + 1
+            )
+        ]
+
+        for metadata in mismatches {
+            XCTAssertThrowsError(try files.load(image: metadata)) {
+                XCTAssertEqual($0 as? ClipImageFileError, .corruptedImage(image.fileID))
+            }
+        }
+        XCTAssertEqual(try files.load(fileID: image.fileID), data)
+    }
+
+    func testValidatedLoadDistinguishesMissingAndCorruptedOriginals() throws {
+        let files = try ClipImageFileStore(rootURL: root)
+        let data = try ClipImageTestFixture.data()
+        let image = try files.save(data)
+        let original = root.appendingPathComponent(image.fileID.uuidString).appendingPathComponent("original")
+        let corrupted = Data(repeating: 0, count: image.byteCount)
+        try corrupted.write(to: original)
+
+        XCTAssertThrowsError(try files.load(image: image)) {
+            XCTAssertEqual($0 as? ClipImageFileError, .corruptedImage(image.fileID))
+        }
+        XCTAssertEqual(try files.load(fileID: image.fileID), corrupted)
+        try FileManager.default.removeItem(at: original)
+        XCTAssertThrowsError(try files.load(image: image)) {
+            XCTAssertEqual($0 as? ClipImageFileError, .notFound(image.fileID))
+        }
+    }
 }
 
 enum ClipImageTestFixture {
