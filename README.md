@@ -26,6 +26,7 @@
 - 클립 모델은 `Foundation` 값 타입으로 구성하고 저장 서비스 계약과 SQLite 구현은 `Service/Clip/Storage`에 배치
 - `ClipStorageService`가 저장과 조회, 변경 관찰 계약을 정의하고 `SQLiteClipStorageService`가 SQLiteData로 구현
 - 이미지 원본 파일의 저장과 삭제를 담당하는 코드는 `Service/Clip/Image`에 배치
+- 클립보드 읽기와 텍스트 클립 저장을 담당하는 코드는 `Service/Clip/Clipboard`에 배치
 
 ## 주요 기능
 
@@ -167,6 +168,7 @@ Plyst/
 │	│	├── Service/
 │	│	│	├── Clip/
 │	│	│	│	├── Storage/
+│	│	│	│	├── Clipboard/
 │	│	│	│	└── Image/
 │	│	│	└── SQLite/
 │	│	│		└── SQLiteSynchronousMode.swift
@@ -185,6 +187,7 @@ Plyst/
 │		└── Service/
 │			└── Clip/
 │				├── Storage/
+│				├── Clipboard/
 │				└── Image/
 └── README.md
 ```
