@@ -1,5 +1,5 @@
 //
-//  SQLiteClipRepository.swift
+//  SQLiteClipStorageService.swift
 //  Plyst
 //
 //  Created by opfic on 9/29/26.
@@ -10,21 +10,21 @@ import OSLog
 import SQLiteData
 
 /// SQLiteData로 클립을 저장합니다. 모든 화면은 같은 인스턴스를 공유하여 변경을 관찰합니다.
-actor SQLiteClipRepository: ClipRepository {
+actor SQLiteClipStorageService: ClipStorageService {
 
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "opfic.Plyst",
-        category: String(describing: SQLiteClipRepository.self)
+        category: String(describing: SQLiteClipStorageService.self)
     )
 
     private let database: DatabaseQueue
-    private var subscriptions = [UUID: AsyncStream<ClipRepositoryEvent>.Continuation]()
+    private var subscriptions = [UUID: AsyncStream<ClipStorageEvent>.Continuation]()
 
     init(databaseURL: URL) throws {
         Self.logger.debug("저장소 초기화 시작")
         guard databaseURL.isFileURL, !databaseURL.path.contains("\0") else {
-            Self.logFailure(ClipRepositoryError.readFailed, operation: "저장소 경로 검사")
-            throw ClipRepositoryError.readFailed
+            Self.logFailure(ClipStorageError.readFailed, operation: "저장소 경로 검사")
+            throw ClipStorageError.readFailed
         }
         do {
             try FileManager.default.createDirectory(
@@ -33,7 +33,7 @@ actor SQLiteClipRepository: ClipRepository {
             )
         } catch {
             Self.logFailure(error, operation: "저장소 디렉터리 생성")
-            throw ClipRepositoryError.writeFailed
+            throw ClipStorageError.writeFailed
         }
         let database: DatabaseQueue
         do {
@@ -91,7 +91,7 @@ actor SQLiteClipRepository: ClipRepository {
             try Self.validate(clip)
             try database.write { connection in
                 guard try Self.fetch(id: clip.id, from: connection) == nil else {
-                    throw ClipRepositoryError.duplicateID(clip.id)
+                    throw ClipStorageError.duplicateID(clip.id)
                 }
                 try SQLiteClipRecord.insert { SQLiteClipRecord(clip) }.execute(connection)
             }
@@ -104,7 +104,7 @@ actor SQLiteClipRepository: ClipRepository {
         let result = try access(fallback: .writeFailed) {
             try database.write { connection in
                 guard let current = try Self.fetch(id: id, from: connection) else {
-                    throw ClipRepositoryError.notFound(id)
+                    throw ClipStorageError.notFound(id)
                 }
                 let updated = change.applying(to: current)
                 guard updated != current else { return (clip: current, changed: false) }
@@ -126,7 +126,7 @@ actor SQLiteClipRepository: ClipRepository {
         try access(fallback: .writeFailed) {
             try database.write { connection in
                 guard try Self.fetch(id: id, from: connection) != nil else {
-                    throw ClipRepositoryError.notFound(id)
+                    throw ClipStorageError.notFound(id)
                 }
                 try SQLiteClipRecord.find(id).delete().execute(connection)
             }
@@ -135,9 +135,9 @@ actor SQLiteClipRepository: ClipRepository {
         publish(.deleted(id))
     }
 
-    func changes() -> AsyncStream<ClipRepositoryEvent> {
+    func changes() -> AsyncStream<ClipStorageEvent> {
         let id = UUID()
-        let (stream, continuation) = AsyncStream<ClipRepositoryEvent>.makeStream(bufferingPolicy: .unbounded)
+        let (stream, continuation) = AsyncStream<ClipStorageEvent>.makeStream(bufferingPolicy: .unbounded)
         subscriptions[id] = continuation
         continuation.onTermination = { [weak self] _ in
             Task { await self?.removeSubscription(id) }
@@ -151,7 +151,7 @@ actor SQLiteClipRepository: ClipRepository {
         Self.logger.debug("변경 관찰 구독 종료: 구독자 \(self.subscriptions.count, privacy: .public)개")
     }
 
-    private func publish(_ event: ClipRepositoryEvent) {
+    private func publish(_ event: ClipStorageEvent) {
         for continuation in subscriptions.values {
             continuation.yield(event)
         }
@@ -159,7 +159,7 @@ actor SQLiteClipRepository: ClipRepository {
     }
 
     /// write가 확정될 때까지 actor를 중단하지 않아 저장과 이벤트 발행 순서를 보존합니다.
-    private func access<Value>(_ name: String = #function, fallback: ClipRepositoryError, operation: () throws -> Value) throws -> Value {
+    private func access<Value>(_ name: String = #function, fallback: ClipStorageError, operation: () throws -> Value) throws -> Value {
         Self.logger.debug("\(name, privacy: .public) 시작")
         do {
             try Task.checkCancellation()
@@ -182,7 +182,7 @@ actor SQLiteClipRepository: ClipRepository {
             logger.error("\(operation, privacy: .public) 실패: SQLite 코드 \(resultCode, privacy: .public), 확장 코드 \(extendedResultCode, privacy: .public)")
             return
         }
-        if let error = error as? ClipRepositoryError {
+        if let error = error as? ClipStorageError {
             let reason = switch error {
             case .duplicateID: "duplicateID"
             case .notFound: "notFound"
@@ -208,22 +208,22 @@ actor SQLiteClipRepository: ClipRepository {
         } catch let error as DatabaseError {
             throw error
         } catch {
-            throw ClipRepositoryError.corruptedData
+            throw ClipStorageError.corruptedData
         }
     }
 
     private static func validate(_ clip: Clip) throws {
         guard clip.content.isValid, clip.createdAt.timeIntervalSinceReferenceDate.isFinite,
               clip.lastUsedAt?.timeIntervalSinceReferenceDate.isFinite != false else {
-            throw ClipRepositoryError.invalidContent
+            throw ClipStorageError.invalidContent
         }
     }
 
-    private static func map(_ error: Error, fallback: ClipRepositoryError) -> Error {
-        if error is CancellationError || error is ClipRepositoryError { return error }
+    private static func map(_ error: Error, fallback: ClipStorageError) -> Error {
+        if error is CancellationError || error is ClipStorageError { return error }
         if let error = error as? DatabaseError,
            error.resultCode == .SQLITE_CORRUPT || error.resultCode == .SQLITE_NOTADB {
-            return ClipRepositoryError.corruptedData
+            return ClipStorageError.corruptedData
         }
         return fallback
     }

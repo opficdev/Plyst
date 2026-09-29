@@ -1,5 +1,5 @@
 //
-//  ClipRepository.swift
+//  ClipStorageService.swift
 //  Plyst
 //
 //  Created by opfic on 9/28/26.
@@ -10,8 +10,8 @@
 /// 구현체는 저장 확정과 이벤트 발행을 동일한 순서로 직렬화해야 합니다.
 /// 쓰기 실패 시 기존 상태를 보존하고 이벤트를 발행하지 않아야 합니다.
 /// 변경 사항이 없는 수정은 이벤트 발행 없이 현재 클립을 반환합니다.
-/// 저장 방식에 종속된 오류는 ClipRepositoryError로 매핑하고 CancellationError는 그대로 전파합니다.
-protocol ClipRepository: Sendable {
+/// 저장 방식에 종속된 오류는 ClipStorageError로 매핑하고 CancellationError는 그대로 전파합니다.
+protocol ClipStorageService: Sendable {
 
     /// ClipSortOrder에서 정의한 결정적 순서로 반환합니다. 저장소가 비어 있으면 빈 배열을 반환합니다.
     func fetchAll(order: ClipSortOrder) async throws -> [Clip]
@@ -38,5 +38,5 @@ protocol ClipRepository: Sendable {
     /// 소비자는 자신의 Task를 취소하여 관찰을 종료합니다.
     /// 목록은 조회 전에 구독을 등록하고 이벤트 수신 시 다시 조회합니다.
     /// 버퍼에 남아 있는 이벤트 스냅샷을 최신 조회 결과에 덮어쓰지 않습니다.
-    func changes() async -> AsyncStream<ClipRepositoryEvent>
+    func changes() async -> AsyncStream<ClipStorageEvent>
 }
