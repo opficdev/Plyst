@@ -288,7 +288,8 @@ final class ClipboardReaderSpy: ClipboardReader {
         self.onRead = onRead
     }
 
-    func read() throws -> ClipboardReadResult {
+    @MainActor
+    func read() async throws -> ClipboardReadResult {
         readCount += 1
         try onRead()
         return result

@@ -19,6 +19,5 @@ enum ClipboardReadResult: Equatable, Sendable {
 
 /// 명시적인 호출에서만 클립보드를 읽고 UIKit 객체 대신 값 타입을 반환합니다.
 protocol ClipboardReader: Sendable {
-    @MainActor
-    func read() throws -> ClipboardReadResult
+    func read() async throws -> ClipboardReadResult
 }
