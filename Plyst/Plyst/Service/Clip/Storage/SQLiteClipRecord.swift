@@ -59,12 +59,12 @@ extension SQLiteClipRecord {
         case .text:
             guard let text, imageFileID == nil, imageContentType == nil,
                   pixelWidth == nil, pixelHeight == nil, byteCount == nil else {
-                throw ClipRepositoryError.corruptedData
+                throw ClipStorageError.corruptedData
             }
             content = .text(text)
         case .image:
             guard text == nil, let imageFileID, let imageContentType, let pixelWidth, let pixelHeight, let byteCount else {
-                throw ClipRepositoryError.corruptedData
+                throw ClipStorageError.corruptedData
             }
             content = .image(ClipImageMetadata(
                 fileID: imageFileID, contentType: imageContentType,
@@ -72,7 +72,7 @@ extension SQLiteClipRecord {
             ))
         }
         guard content.isValid, createdAt.isFinite, lastUsedAt?.isFinite != false, isPinned == 0 || isPinned == 1 else {
-            throw ClipRepositoryError.corruptedData
+            throw ClipStorageError.corruptedData
         }
         return Clip(
             id: id, content: content, name: name, isPinned: isPinned == 1, memo: memo,
@@ -87,7 +87,7 @@ extension SQLiteClipRecord {
             try createTable(in: connection)
         }
         if try database.read({ try migrator.hasBeenSuperseded($0) }) {
-            throw ClipRepositoryError.corruptedData
+            throw ClipStorageError.corruptedData
         }
         try migrator.migrate(database)
     }

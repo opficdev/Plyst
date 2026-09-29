@@ -18,10 +18,13 @@
 - `Plyst.xcodeproj`의 앱 타깃 안에서 역할별 폴더와 화면별 폴더로 코드 구분
 - `App`, `Model`, `Service`, `Feature`, `Shared`를 단수형 폴더 이름으로 사용
 - `Feature`는 화면 단위로 나누고 해당 ViewController와 Reactor를 같은 폴더에 배치
+- ViewController는 사용자 입력을 Action으로 전달하고 State를 화면에 표시하며, Reactor는 요청 처리와 상태 변경을 담당
+- 외부 자원 접근과 저장은 `Service`, 클립 값과 검증, 변경과 정렬 규칙은 `Model`로 구분
 - UIKit 코드로 화면을 구성하고 `SceneDelegate`에서 `UIWindow`와 초기 `UINavigationController` 연결
 - ReactorKit의 `Action`, `Mutation`, `State`로 화면 상태를 관리하고 ViewController는 상태를 비동기로 구독
 - 서비스의 `async/await`와 `AsyncStream`을 `ReactorEffect`에서 RxSwift로 연결
-- 클립 모델은 `Foundation` 값 타입으로 구성하고 저장소 계약과 관련 타입, SQLite 구현은 `Service/Clip/Repository`에 배치
+- 클립 모델은 `Foundation` 값 타입으로 구성하고 저장 서비스 계약과 SQLite 구현은 `Service/Clip/Storage`에 배치
+- `ClipStorageService`가 저장과 조회, 변경 관찰 계약을 정의하고 `SQLiteClipStorageService`가 SQLiteData로 구현
 - 이미지 원본 파일의 저장과 삭제를 담당하는 코드는 `Service/Clip/Image`에 배치
 
 ## 주요 기능
@@ -34,7 +37,7 @@
 - 이미지 파일 식별자, 콘텐츠 형식, 해상도, 바이트 크기 표현
 - 공백뿐인 텍스트와 유효하지 않은 이미지 메타데이터 검사
 
-### 클립 저장소 계약
+### 클립 저장 서비스 계약
 
 - 목록 조회, 단건 조회, 추가, 수정, 삭제를 위한 비동기 인터페이스 정의
 - 추가, 수정, 삭제 결과를 전달하는 `AsyncStream` 이벤트 계약 정의
@@ -47,7 +50,7 @@
 - 주입받은 파일 경로에서 SQLiteData로 텍스트와 이미지 메타데이터 저장
 - 기존 `ClipUpdate`와 `ClipSortOrder`를 적용해 수정 규칙과 정렬 순서 보존
 - 트랜잭션 확정 후에만 추가, 수정, 삭제 이벤트 발행
-- 저장 실패와 손상 데이터는 `ClipRepositoryError`로 전달
+- 저장 실패와 손상 데이터는 `ClipStorageError`로 전달
 
 ### 화면 상태 관리
 
@@ -158,10 +161,12 @@ Plyst/
 │	│	├── Model/
 │	│	│	├── Clip.swift
 │	│	│	├── ClipContent.swift
-│	│	│	└── ClipImageMetadata.swift
+│	│	│	├── ClipImageMetadata.swift
+│	│	│	├── ClipSortOrder.swift
+│	│	│	└── ClipUpdate.swift
 │	│	├── Service/
 │	│	│	├── Clip/
-│	│	│	│	├── Repository/
+│	│	│	│	├── Storage/
 │	│	│	│	└── Image/
 │	│	│	└── SQLite/
 │	│	│		└── SQLiteSynchronousMode.swift
@@ -179,7 +184,7 @@ Plyst/
 │		├── Model/
 │		└── Service/
 │			└── Clip/
-│				├── Repository/
+│				├── Storage/
 │				└── Image/
 └── README.md
 ```

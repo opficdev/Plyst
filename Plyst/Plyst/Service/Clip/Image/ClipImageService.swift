@@ -9,16 +9,16 @@ import Foundation
 
 /// 같은 루트의 이미지 쓰기와 복구를 하나의 인스턴스에서 조율합니다. 별도 프로세스의 변경은 조율하지 않습니다.
 actor ClipImageService {
-    private let repository: any ClipRepository
+    private let storage: any ClipStorageService
     private let files: ClipImageFileStore
     private var isBusy = false
     private var waiters = [CheckedContinuation<Void, Never>]()
 
     init(
-        repository: any ClipRepository,
+        storage: any ClipStorageService,
         files: ClipImageFileStore
     ) {
-        self.repository = repository
+        self.storage = storage
         self.files = files
     }
 
@@ -42,7 +42,7 @@ actor ClipImageService {
             createdAt: createdAt
         )
         do {
-            try await repository.insert(clip)
+            try await storage.insert(clip)
         } catch {
             try? files.delete(fileID: image.fileID)
             throw error
@@ -60,7 +60,7 @@ actor ClipImageService {
     func loadImage(id: Clip.ID) async throws -> Data {
         try await acquire()
         defer { release() }
-        guard let clip = try await repository.fetch(id: id) else { throw ClipRepositoryError.notFound(id) }
+        guard let clip = try await storage.fetch(id: id) else { throw ClipStorageError.notFound(id) }
         guard case .image(let image) = clip.content else { throw ClipImageFileError.notImage(id) }
         return try files.load(fileID: image.fileID)
     }
@@ -69,9 +69,9 @@ actor ClipImageService {
     func delete(id: Clip.ID) async throws -> ClipImageMutationResult<Clip.ID> {
         try await acquire()
         defer { release() }
-        guard let clip = try await repository.fetch(id: id) else { throw ClipRepositoryError.notFound(id) }
+        guard let clip = try await storage.fetch(id: id) else { throw ClipStorageError.notFound(id) }
         if case .image(let image) = clip.content { try files.markPending(fileID: image.fileID) }
-        try await repository.delete(id: id)
+        try await storage.delete(id: id)
         var cleanup = ClipImageCleanupState.completed
         if case .image(let image) = clip.content { cleanup = await clean(fileID: image.fileID) }
         return ClipImageMutationResult(value: id, cleanup: cleanup)
@@ -95,7 +95,7 @@ actor ClipImageService {
     }
 
     private func imageReferences() async throws -> Set<UUID> {
-        let clips = try await repository.fetchAll(order: .createdAt)
+        let clips = try await storage.fetchAll(order: .createdAt)
         return Set(clips.compactMap { clip in
             guard case .image(let image) = clip.content else { return nil }
             return image.fileID
