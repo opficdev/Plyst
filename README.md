@@ -7,7 +7,7 @@
 
 복사한 텍스트와 이미지를 모으고 이름과 메모, 고정 여부로 정리해 다시 사용할 수 있도록 만드는 앱
 
-현재는 UIKit 프로젝트 기반, ReactorKit 화면 상태 흐름, 클립 모델과 저장소 계약을 구성한 단계
+현재는 UIKit 프로젝트 기반, ReactorKit 화면 상태 흐름, 클립 모델과 SQLiteData 기반 로컬 저장소를 구성한 단계
 
 - 텍스트와 이미지 클립을 하나의 기록 모델로 표현
 - 클립 원문과 이미지 파일 메타데이터를 화면과 분리
@@ -41,6 +41,13 @@
 - 저장 시각 또는 마지막 사용 시각을 기준으로 정렬하고 동률 순서 고정
 - 화면과 저장 방식에 의존하지 않는 오류 모델 정의
 
+### 로컬 저장소
+
+- 주입받은 파일 경로에서 SQLiteData로 텍스트와 이미지 메타데이터 저장
+- 기존 `ClipUpdate`와 `ClipSortOrder`를 적용해 수정 규칙과 정렬 순서 보존
+- 트랜잭션 확정 후에만 추가, 수정, 삭제 이벤트 발행
+- 저장 실패와 손상 데이터는 `ClipRepositoryError`로 전달
+
 ### 화면 상태 관리
 
 - ViewController 하나가 Reactor 하나의 상태를 비동기로 구독
@@ -60,7 +67,7 @@
 | 화면 | UIKit |
 | 상태와 비동기 처리 | ReactorKit, RxSwift, async/await, AsyncStream |
 | Apple 프레임워크 | UIKit, Foundation |
-| 외부 패키지 | ReactorKit, RxSwift |
+| 외부 패키지 | ReactorKit, RxSwift, SQLiteData, GRDB, swift-structured-queries |
 | 테스트 | XCTest |
 | 개발 도구 | Xcode, Swift Package Manager, SwiftLint, mise, Make, GitHub Actions |
 
@@ -68,6 +75,9 @@
 
 - Xcode 프로젝트와 Shared Scheme을 Git에서 추적
 - Swift Package 의존성은 프로젝트에서 선언하고 `Package.resolved`에서 해석된 버전 고정
+- 테스트 코드 빌드에 필요한 `StructuredQueriesCore`와 `GRDB`를 사용하는 타깃에 명시적으로 연결
+- 로컬에서는 Xcode의 `Trust & Enable`로 외부 패키지의 Swift Macro 승인
+- CI에서는 `XCODEBUILD_FLAGS=-skipMacroValidation`을 전달해 해당 빌드의 모든 Swift Macro 신뢰 검증 생략
 - SwiftLint 버전은 `.mise.toml`에서 고정하고 로컬과 CI에서 같은 버전 사용
 - 화면은 UIKit 코드로 구성하고 `LaunchScreen.storyboard`는 시스템 시작 화면에만 사용
 - `xcuserdata`와 빌드 산출물은 Git 추적 대상에서 제외

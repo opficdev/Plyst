@@ -7,7 +7,6 @@
 
 /// UI, 영구 저장 형식, 파일 경로에 의존하지 않는 저장소 오류입니다.
 enum ClipRepositoryError: Error, Equatable, Sendable {
-
     case duplicateID(Clip.ID)
     case notFound(Clip.ID)
     case invalidContent
