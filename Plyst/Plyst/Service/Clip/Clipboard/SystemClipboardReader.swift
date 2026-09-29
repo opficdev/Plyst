@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import UniformTypeIdentifiers
 
 /// 첫 항목의 형식 확인과 읽기를 MainActor에서 수행합니다. 변경을 감시하거나 읽기를 재시도하지 않습니다.
 struct SystemClipboardReader: ClipboardReader {
@@ -15,6 +16,7 @@ struct SystemClipboardReader: ClipboardReader {
         let pasteboard = UIPasteboard.general
         let changeCount = pasteboard.changeCount
         let result = readFirstItem(from: pasteboard)
+        try Task.checkCancellation()
         guard changeCount == pasteboard.changeCount else { return .accessFailed }
         return result
     }
@@ -22,6 +24,14 @@ struct SystemClipboardReader: ClipboardReader {
     @MainActor
     private func readFirstItem(from pasteboard: UIPasteboard) -> ClipboardReadResult {
         guard pasteboard.numberOfItems != 0 else { return .empty }
+        // 첫 항목에 등록된 이미지 표현을 우선 선택하고 읽기 실패 시 텍스트나 URL로 대체하지 않습니다.
+        let imageType = pasteboard.itemProviders.first?.registeredTypeIdentifiers.first {
+            UTType($0)?.conforms(to: .image) == true
+        }
+        if let imageType {
+            guard let data = pasteboard.data(forPasteboardType: imageType) else { return .accessFailed }
+            return .image(data)
+        }
         guard let textTypes = UIPasteboard.typeListString as? [String],
               let urlTypes = UIPasteboard.typeListURL as? [String] else { return .accessFailed }
         // hasStrings와 hasURLs는 전체 항목을 확인하므로 첫 항목의 형식만 검사합니다.
