@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Build
-        run: make build
+        run: make build XCODEBUILD_FLAGS=-skipMacroValidation
 
   test-build:
     name: Test Build
@@ -41,4 +41,4 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Build tests
-        run: make test-build
+        run: make test-build XCODEBUILD_FLAGS=-skipMacroValidation

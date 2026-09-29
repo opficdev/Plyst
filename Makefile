@@ -3,6 +3,7 @@ SCHEME := Plyst
 CONFIGURATION ?= Debug
 DESTINATION ?= generic/platform=iOS Simulator
 DERIVED_DATA_PATH ?= /tmp/plyst-derived-data
+XCODEBUILD_FLAGS ?=
 
 .PHONY: lint build test-build verify
 
@@ -11,7 +12,7 @@ lint:
 	mise exec -- swiftlint lint --strict --no-cache --config .swiftlint-tests.yml Plyst/PlystTests
 
 build:
-	xcodebuild -quiet \
+	xcodebuild -quiet $(XCODEBUILD_FLAGS) \
 		-project "$(PROJECT)" \
 		-scheme "$(SCHEME)" \
 		-configuration "$(CONFIGURATION)" \
@@ -21,7 +22,7 @@ build:
 		build
 
 test-build:
-	xcodebuild -quiet \
+	xcodebuild -quiet $(XCODEBUILD_FLAGS) \
 		-project "$(PROJECT)" \
 		-scheme "$(SCHEME)" \
 		-configuration "$(CONFIGURATION)" \
