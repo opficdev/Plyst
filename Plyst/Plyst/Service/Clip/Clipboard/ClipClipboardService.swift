@@ -5,23 +5,34 @@
 //  Created by opfic on 9/29/26.
 //
 
+import Foundation
+
 enum ClipClipboardSaveResult: Equatable, Sendable {
     case saved(Clip)
+    /// 이미지 원본과 클립 기록은 저장됐지만 pending 표시 파일을 제거하지 못했습니다.
+    /// recoverPendingCleanup()을 호출해야 정리를 다시 시도합니다.
+    case savedWithPendingCleanup(Clip, fileID: UUID)
     case empty
     case unsupported
     case accessFailed
+    case invalidImage
 }
 
-/// 사용자 저장 요청에 따라 클립보드를 읽고 텍스트 클립을 추가합니다. 초기화 시에는 클립보드에 접근하지 않습니다.
+/// 사용자 저장 요청에 따라 클립보드를 읽고 클립을 추가합니다. 초기화 시에는 클립보드에 접근하지 않습니다.
+/// storage와 images는 같은 저장소를 사용해야 합니다.
+/// 이미지 루트별로 하나의 ClipImageService를 공유해야 합니다.
 struct ClipClipboardService: Sendable {
     private let storage: any ClipStorageService
+    private let images: ClipImageService
     private let reader: any ClipboardReader
 
     init(
         storage: any ClipStorageService,
+        images: ClipImageService,
         reader: any ClipboardReader = SystemClipboardReader()
     ) {
         self.storage = storage
+        self.images = images
         self.reader = reader
     }
 
@@ -36,6 +47,26 @@ struct ClipClipboardService: Sendable {
             let clip = Clip(content: content)
             try await storage.insert(clip)
             return .saved(clip)
+        case .image(let data):
+            try Task.checkCancellation()
+            do {
+                let result = try await images.saveImage(data)
+                switch result.cleanup {
+                case .completed:
+                    return .saved(result.value)
+                case .pending(let fileID):
+                    return .savedWithPendingCleanup(result.value, fileID: fileID)
+                }
+            } catch let error as ClipImageFileError {
+                switch error {
+                case .invalidImage:
+                    return .invalidImage
+                case .unsupportedImage:
+                    return .unsupported
+                default:
+                    throw error
+                }
+            }
         case .empty:
             return .empty
         case .unsupported:
