@@ -13,6 +13,7 @@ enum ClipImageFileError: Error, Equatable, Sendable {
     case unsafePath
     case unsupportedImage
     case invalidImage
+    case corruptedImage(UUID)
     case notImage(Clip.ID)
     case notFound(UUID)
     case readFailed

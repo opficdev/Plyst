@@ -58,6 +58,22 @@ struct ClipImageFileStore: Sendable {
         do { return try Data(contentsOf: original) } catch { throw ClipImageFileError.readFailed }
     }
 
+    /// 저장된 메타데이터와 원본을 대조하며 파일이나 이미지 표현을 변경하지 않습니다.
+    func load(image: ClipImageMetadata) throws -> Data {
+        try Task.checkCancellation()
+        let data = try load(fileID: image.fileID)
+        guard data.count == image.byteCount else { throw ClipImageFileError.corruptedImage(image.fileID) }
+        do {
+            let properties = try imageProperties(data)
+            guard properties.type == image.contentType,
+                  properties.size.width == image.pixelWidth,
+                  properties.size.height == image.pixelHeight else { throw ClipImageFileError.corruptedImage(image.fileID) }
+            return data
+        } catch let error as ClipImageFileError where error == .invalidImage || error == .unsupportedImage {
+            throw ClipImageFileError.corruptedImage(image.fileID)
+        }
+    }
+
     /// 이미 존재하지 않는 파일은 삭제된 것으로 처리합니다.
     func delete(fileID: UUID) throws {
         guard let directory = try directory(for: fileID) else { return }

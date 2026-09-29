@@ -62,7 +62,14 @@ actor ClipImageService {
         defer { release() }
         guard let clip = try await storage.fetch(id: id) else { throw ClipStorageError.notFound(id) }
         guard case .image(let image) = clip.content else { throw ClipImageFileError.notImage(id) }
-        return try files.load(fileID: image.fileID)
+        return try files.load(image: image)
+    }
+
+    /// 클립을 재조회하지 않고 전달받은 메타데이터에 대응하는 원본을 검증합니다.
+    func loadImage(_ image: ClipImageMetadata) async throws -> Data {
+        try await acquire()
+        defer { release() }
+        return try files.load(image: image)
     }
 
     /// DB 삭제 확정 후 파일 정리에 실패해도 확정된 삭제를 실패로 반환하지 않습니다.

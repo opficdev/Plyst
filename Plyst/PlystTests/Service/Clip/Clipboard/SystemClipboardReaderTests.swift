@@ -25,7 +25,7 @@ final class SystemClipboardReaderTests: XCTestCase {
         try super.tearDownWithError()
     }
 
-    func testImageWinsOverTextAndURLInTheSameItemWithoutChangingBytes() throws {
+    func testImageWinsOverTextAndURLInTheSameItemWithoutChangingBytes() async throws {
         let data = try ClipImageTestFixture.data(type: UTType.jpeg.identifier, orientation: 6)
         let url = try XCTUnwrap(URL(string: "https://example.com/image"))
         UIPasteboard.general.items = [[
@@ -34,36 +34,36 @@ final class SystemClipboardReaderTests: XCTestCase {
             UTType.url.identifier: url
         ]]
 
-        let result = try SystemClipboardReader().read()
+        let result = try await SystemClipboardReader().read()
 
         XCTAssertEqual(result, .image(data))
     }
 
-    func testImageInLaterItemDoesNotReplaceFirstURL() throws {
+    func testImageInLaterItemDoesNotReplaceFirstURL() async throws {
         let url = try XCTUnwrap(URL(string: "https://example.com/first"))
         UIPasteboard.general.items = [
             [UTType.url.identifier: url],
             [UTType.png.identifier: try ClipImageTestFixture.data()]
         ]
 
-        let result = try SystemClipboardReader().read()
+        let result = try await SystemClipboardReader().read()
 
         XCTAssertEqual(result, .text(url.absoluteString))
     }
 
-    func testImageInLaterItemDoesNotReplaceFirstText() throws {
+    func testImageInLaterItemDoesNotReplaceFirstText() async throws {
         let text = " 첫 번째 원문\n "
         UIPasteboard.general.items = [
             [UTType.utf8PlainText.identifier: text],
             [UTType.png.identifier: try ClipImageTestFixture.data()]
         ]
 
-        let result = try SystemClipboardReader().read()
+        let result = try await SystemClipboardReader().read()
 
         XCTAssertEqual(result, .text(text))
     }
 
-    func testCorruptImageRepresentationDoesNotFallBackToURL() throws {
+    func testCorruptImageRepresentationDoesNotFallBackToURL() async throws {
         let data = Data("손상된 이미지".utf8)
         let url = try XCTUnwrap(URL(string: "https://example.com/fallback"))
         UIPasteboard.general.items = [[
@@ -71,22 +71,22 @@ final class SystemClipboardReaderTests: XCTestCase {
             UTType.url.identifier: url
         ]]
 
-        let result = try SystemClipboardReader().read()
+        let result = try await SystemClipboardReader().read()
 
         // 이미지 검증은 저장 서비스의 책임이며 읽기 단계에서 URL로 대체하지 않습니다.
         XCTAssertEqual(result, .image(data))
     }
 
-    func testAnimatedImageBytesAreReadWithoutReencoding() throws {
+    func testAnimatedImageBytesAreReadWithoutReencoding() async throws {
         let data = try ClipImageTestFixture.data(type: UTType.gif.identifier, count: 2)
         UIPasteboard.general.items = [[UTType.gif.identifier: data]]
 
-        let result = try SystemClipboardReader().read()
+        let result = try await SystemClipboardReader().read()
 
         XCTAssertEqual(result, .image(data))
     }
 
-    func testUnreadableImageRepresentationDoesNotFallBackToURL() throws {
+    func testUnreadableImageRepresentationDoesNotFallBackToURL() async throws {
         let url = try XCTUnwrap(URL(string: "https://example.com/fallback"))
         let provider = NSItemProvider(object: url as NSURL)
         provider.registerDataRepresentation(forTypeIdentifier: UTType.png.identifier, visibility: .all) { completion in
@@ -95,29 +95,35 @@ final class SystemClipboardReaderTests: XCTestCase {
         }
         UIPasteboard.general.itemProviders = [provider]
 
-        XCTAssertEqual(try SystemClipboardReader().read(), .accessFailed)
+        let result = try await SystemClipboardReader().read()
+
+        XCTAssertEqual(result, .accessFailed)
     }
 
-    func testEmptyPasteboardDoesNotProduceContent() throws {
+    func testEmptyPasteboardDoesNotProduceContent() async throws {
         UIPasteboard.general.items = []
 
-        XCTAssertEqual(try SystemClipboardReader().read(), .empty)
+        let result = try await SystemClipboardReader().read()
+
+        XCTAssertEqual(result, .empty)
     }
 
-    func testUnsupportedFirstItemDoesNotSelectLaterImage() throws {
+    func testUnsupportedFirstItemDoesNotSelectLaterImage() async throws {
         UIPasteboard.general.items = [
             [UTType.pdf.identifier: Data("%PDF".utf8)],
             [UTType.png.identifier: try ClipImageTestFixture.data()]
         ]
 
-        XCTAssertEqual(try SystemClipboardReader().read(), .unsupported)
+        let result = try await SystemClipboardReader().read()
+
+        XCTAssertEqual(result, .unsupported)
     }
 
     func testCancelledReadDoesNotReturnContent() async throws {
         UIPasteboard.general.items = [[UTType.png.identifier: try ClipImageTestFixture.data()]]
         let task = Task {
             withUnsafeCurrentTask { $0?.cancel() }
-            return try SystemClipboardReader().read()
+            return try await SystemClipboardReader().read()
         }
 
         do {

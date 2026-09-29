@@ -8,10 +8,10 @@
 import UIKit
 import UniformTypeIdentifiers
 
-/// 첫 항목의 형식 확인과 읽기를 MainActor에서 수행합니다. 변경을 감시하거나 읽기를 재시도하지 않습니다.
+/// 호출자의 actor 밖에서 첫 항목의 형식을 확인하고 읽습니다. 변경을 감시하거나 읽기를 재시도하지 않습니다.
 struct SystemClipboardReader: ClipboardReader {
-    @MainActor
-    func read() throws -> ClipboardReadResult {
+    @concurrent
+    func read() async throws -> ClipboardReadResult {
         try Task.checkCancellation()
         let pasteboard = UIPasteboard.general
         let changeCount = pasteboard.changeCount
@@ -21,7 +21,6 @@ struct SystemClipboardReader: ClipboardReader {
         return result
     }
 
-    @MainActor
     private func readFirstItem(from pasteboard: UIPasteboard) -> ClipboardReadResult {
         guard pasteboard.numberOfItems != 0 else { return .empty }
         // 첫 항목에 등록된 이미지 표현을 우선 선택하고 읽기 실패 시 텍스트나 URL로 대체하지 않습니다.
