@@ -21,7 +21,8 @@
 - UIKit 코드로 화면을 구성하고 `SceneDelegate`에서 `UIWindow`와 초기 `UINavigationController` 연결
 - ReactorKit의 `Action`, `Mutation`, `State`로 화면 상태를 관리하고 ViewController는 상태를 비동기로 구독
 - 서비스의 `async/await`와 `AsyncStream`을 `ReactorEffect`에서 RxSwift로 연결
-- 클립 모델은 `Foundation` 값 타입으로 구성하고 저장소 계약과 관련 타입은 `Service/Clip`에 배치
+- 클립 모델은 `Foundation` 값 타입으로 구성하고 저장소 계약과 관련 타입, SQLite 구현은 `Service/Clip/Repository`에 배치
+- 이미지 원본 파일의 저장과 삭제를 담당하는 코드는 `Service/Clip/Image`에 배치
 
 ## 주요 기능
 
@@ -159,12 +160,11 @@ Plyst/
 │	│	│	├── ClipContent.swift
 │	│	│	└── ClipImageMetadata.swift
 │	│	├── Service/
-│	│	│	└── Clip/
-│	│	│		├── ClipRepository.swift
-│	│	│		├── ClipRepositoryError.swift
-│	│	│		├── ClipRepositoryEvent.swift
-│	│	│		├── ClipSortOrder.swift
-│	│	│		└── ClipUpdate.swift
+│	│	│	├── Clip/
+│	│	│	│	├── Repository/
+│	│	│	│	└── Image/
+│	│	│	└── SQLite/
+│	│	│		└── SQLiteSynchronousMode.swift
 │	│	├── Feature/
 │	│	│	└── Root/
 │	│	│		├── AppReactor.swift
@@ -178,5 +178,8 @@ Plyst/
 │	└── PlystTests/
 │		├── Model/
 │		└── Service/
+│			└── Clip/
+│				├── Repository/
+│				└── Image/
 └── README.md
 ```
