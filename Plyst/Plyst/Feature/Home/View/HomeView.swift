@@ -46,10 +46,7 @@ final class HomeView: UIView {
     private let lock = UIImageView(image: UIImage(systemName: "lock.fill"))
     private let privacy = UILabel()
     private lazy var privacyRow = UIStackView(arrangedSubviews: [lock, privacy])
-    private let feedbackView = UIView()
-    private let feedbackLabel = UILabel()
-    private var isFeedbackVisible = false
-    private var feedbackAnimationID = UUID()
+    private let toast = ToastView(textColor: UIColor(resource: .homeBottomText))
     private var headerHeight = CGFloat.zero
     private var hiddenHeaderHeight = CGFloat.zero
     private var scrollViewportSize = CGSize.zero
@@ -124,64 +121,16 @@ final class HomeView: UIView {
         message: String,
         isSuccess: Bool
     ) {
-        feedbackAnimationID = UUID()
-        isFeedbackVisible = true
-        feedbackLabel.text = message
-        feedbackView.backgroundColor = isSuccess
-            ? UIColor(resource: .homeFeedbackSuccess)
-            : UIColor(resource: .homeFeedbackFailure)
-        layoutIfNeeded()
-
-        feedbackView.layer.removeAllAnimations()
-        UIView.performWithoutAnimation {
-            feedbackView.transform = feedbackHiddenTransform()
-            feedbackView.alpha = 0
-            feedbackView.isHidden = false
-        }
-
-        UIView.animate(
-            withDuration: 0.25,
-            delay: 0,
-            options: [.allowUserInteraction, .curveEaseOut],
-            animations: { [weak self] in
-                self?.feedbackView.transform = .identity
-                self?.feedbackView.alpha = 1
-            }
+        toast.show(
+            message: message,
+            backgroundColor: isSuccess
+                ? UIColor(resource: .homeFeedbackSuccess)
+                : UIColor(resource: .homeFeedbackFailure)
         )
     }
 
     func hideFeedback() {
-        guard isFeedbackVisible else { return }
-        isFeedbackVisible = false
-        let id = UUID()
-        feedbackAnimationID = id
-        layoutIfNeeded()
-        let transform = feedbackHiddenTransform()
-
-        UIView.animate(
-            withDuration: 0.2,
-            delay: 0,
-            options: [.beginFromCurrentState, .allowUserInteraction, .curveEaseIn],
-            animations: { [weak self] in
-                self?.feedbackView.transform = transform
-                self?.feedbackView.alpha = 0
-            },
-            completion: { [weak self] _ in
-                guard let self,
-                      feedbackAnimationID == id,
-                      !isFeedbackVisible else { return }
-                feedbackView.isHidden = true
-                feedbackView.transform = .identity
-                feedbackView.alpha = 1
-            }
-        )
-    }
-
-    private func feedbackHiddenTransform() -> CGAffineTransform {
-        CGAffineTransform(
-            translationX: 0,
-            y: -16
-        )
+        toast.hide()
     }
 
     private func updateScrollGeometry() {
@@ -270,15 +219,6 @@ final class HomeView: UIView {
         privacyRow.axis = .horizontal
         privacyRow.alignment = .center
         privacyRow.spacing = 6
-
-        feedbackView.backgroundColor = UIColor(resource: .homeFeedbackSuccess)
-        feedbackView.layer.cornerRadius = 12
-        feedbackView.isHidden = true
-        feedbackView.isUserInteractionEnabled = false
-        feedbackLabel.font = .systemFont(ofSize: 14, weight: .medium)
-        feedbackLabel.textColor = UIColor(resource: .homeBottomText)
-        feedbackLabel.textAlignment = .center
-        feedbackLabel.numberOfLines = 0
     }
 
     private func registerCells() {
@@ -300,8 +240,7 @@ final class HomeView: UIView {
         addSubview(saveBar)
         saveBar.addSubview(saveButton)
         saveBar.addSubview(privacyRow)
-        addSubview(feedbackView)
-        feedbackView.addSubview(feedbackLabel)
+        addSubview(toast)
     }
 
     private func makeLayout() {
@@ -313,8 +252,7 @@ final class HomeView: UIView {
         saveButton.translatesAutoresizingMaskIntoConstraints = false
         lock.translatesAutoresizingMaskIntoConstraints = false
         privacyRow.translatesAutoresizingMaskIntoConstraints = false
-        feedbackView.translatesAutoresizingMaskIntoConstraints = false
-        feedbackLabel.translatesAutoresizingMaskIntoConstraints = false
+        toast.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: topAnchor),
@@ -349,14 +287,10 @@ final class HomeView: UIView {
             emptyState.centerYAnchor.constraint(equalTo: contentArea.centerYAnchor, constant: 24),
             emptyState.leadingAnchor.constraint(greaterThanOrEqualTo: collectionView.leadingAnchor, constant: 40),
             emptyState.trailingAnchor.constraint(lessThanOrEqualTo: collectionView.trailingAnchor, constant: -40),
-            feedbackView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            feedbackView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 12),
-            feedbackView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 20),
-            feedbackView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20),
-            feedbackLabel.topAnchor.constraint(equalTo: feedbackView.topAnchor, constant: 11),
-            feedbackLabel.bottomAnchor.constraint(equalTo: feedbackView.bottomAnchor, constant: -11),
-            feedbackLabel.leadingAnchor.constraint(equalTo: feedbackView.leadingAnchor, constant: 14),
-            feedbackLabel.trailingAnchor.constraint(equalTo: feedbackView.trailingAnchor, constant: -14)
+            toast.centerXAnchor.constraint(equalTo: centerXAnchor),
+            toast.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 12),
+            toast.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 20),
+            toast.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20)
         ])
     }
 
