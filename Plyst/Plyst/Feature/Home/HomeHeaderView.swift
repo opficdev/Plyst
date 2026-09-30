@@ -24,15 +24,14 @@ final class HomeTitleHeaderView: UIView {
     }
 
     private func configureAppearance() {
-        mark.text = "P"
+        mark.attributedText = NSAttributedString(string: "P", attributes: [.kern: -0.72])
         mark.font = .systemFont(ofSize: 18, weight: .heavy)
         mark.textAlignment = .center
-        mark.textColor = UIColor(resource: .homeOnDark)
+        mark.textColor = UIColor(resource: .homeBottomText)
         mark.backgroundColor = UIColor(resource: .homeMarkBackground)
         mark.layer.cornerRadius = 10
-        mark.layer.masksToBounds = true
 
-        title.text = "Plyst"
+        title.attributedText = NSAttributedString(string: "Plyst", attributes: [.kern: -1.12])
         title.font = .systemFont(ofSize: 32, weight: .heavy)
         title.textColor = UIColor(resource: .homePrimaryText)
     }
@@ -53,7 +52,8 @@ final class HomeTitleHeaderView: UIView {
             mark.heightAnchor.constraint(equalToConstant: 34),
             title.centerYAnchor.constraint(equalTo: mark.centerYAnchor),
             title.leadingAnchor.constraint(equalTo: mark.trailingAnchor, constant: 10),
-            title.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20)
+            title.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20),
+            bottomAnchor.constraint(equalTo: title.bottomAnchor, constant: 16)
         ])
     }
 }
@@ -77,13 +77,17 @@ final class HomeSectionHeaderView: UICollectionReusableView {
     }
 
     func configure(title: String) {
-        self.title.text = title
+        self.title.attributedText = NSAttributedString(
+            string: title,
+            attributes: [
+                .font: UIFont.monospacedSystemFont(ofSize: 11, weight: .semibold),
+                .foregroundColor: UIColor(resource: .homeSecondaryText),
+                .kern: 0.88
+            ]
+        )
     }
 
     private func configureAppearance() {
-        title.font = .monospacedSystemFont(ofSize: 11, weight: .semibold)
-        title.textColor = UIColor(resource: .homeSecondaryText)
-
         rule.backgroundColor = UIColor(resource: .homeOutline)
     }
 

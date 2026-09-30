@@ -58,8 +58,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
         if sectionsChanged || renderedNow != state.now {
             self.sections = sections
             renderedNow = state.now
-            homeView.layout.invalidateLayout()
-            collectionView.reloadData()
+            homeView.reloadContent()
         }
         if sectionsChanged { timeline.update(clips: state.clips) }
 
@@ -147,6 +146,10 @@ extension HomeViewController: HomeViewDelegate {
 }
 
 extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelegate, HomeGridLayoutDelegate {
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        homeView.updateScrollPosition(scrollView.contentOffset.y)
+    }
+
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         sections.count
     }

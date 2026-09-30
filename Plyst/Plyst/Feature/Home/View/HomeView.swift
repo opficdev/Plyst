@@ -14,15 +14,33 @@ protocol HomeViewDelegate: AnyObject {
 
 @MainActor
 final class HomeView: UIView {
+    private static let saveIcon = UIGraphicsImageRenderer(size: CGSize(width: 18, height: 18)).image { _ in
+        UIColor.black.setStroke()
+        let board = UIBezierPath(roundedRect: CGRect(x: 3.5, y: 3, width: 11, height: 13), cornerRadius: 2.5)
+        board.lineWidth = 1.7
+        board.stroke()
+        let clip = UIBezierPath(roundedRect: CGRect(x: 6.5, y: 1.5, width: 5, height: 3), cornerRadius: 1.2)
+        clip.fill(with: .clear, alpha: 1)
+        clip.lineWidth = 1.5
+        clip.stroke()
+        let plus = UIBezierPath()
+        plus.move(to: CGPoint(x: 9, y: 8))
+        plus.addLine(to: CGPoint(x: 9, y: 13))
+        plus.move(to: CGPoint(x: 6.5, y: 10.5))
+        plus.addLine(to: CGPoint(x: 11.5, y: 10.5))
+        plus.lineWidth = 1.7
+        plus.lineCapStyle = .round
+        plus.stroke()
+    }.withRenderingMode(.alwaysTemplate)
+
     weak var delegate: HomeViewDelegate?
 
     let layout = HomeGridLayout()
     private(set) lazy var collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
     private let titleHeader = HomeTitleHeaderView(frame: .zero)
-    private let contentStack = UIStackView()
-    private let emptyState = UIStackView()
-    private let emptyTitle = UILabel()
-    private let emptyBody = UILabel()
+    private let headerContainer = UIView()
+    private let contentArea = UILayoutGuide()
+    private let emptyState = HomeEmptyStateView()
     private let saveBar = UIView()
     private let saveButton = UIButton(type: .system)
     private let lock = UIImageView(image: UIImage(systemName: "lock.fill"))
@@ -32,6 +50,11 @@ final class HomeView: UIView {
     private let feedbackLabel = UILabel()
     private var isFeedbackVisible = false
     private var feedbackAnimationID = UUID()
+    private var headerHeight = CGFloat.zero
+    private var hiddenHeaderHeight = CGFloat.zero
+    private var scrollViewportSize = CGSize.zero
+    private var previousScrollY: CGFloat?
+    private var isUpdatingScrollGeometry = false
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -47,6 +70,39 @@ final class HomeView: UIView {
         fatalError("init(coder:) is unavailable")
     }
 
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        updateScrollGeometry()
+    }
+
+    func reloadContent() {
+        let wasUpdating = isUpdatingScrollGeometry
+        isUpdatingScrollGeometry = true
+        defer { isUpdatingScrollGeometry = wasUpdating }
+
+        layout.invalidateLayout()
+        collectionView.reloadData()
+        collectionView.layoutIfNeeded()
+        let scrollY = boundedScrollY(collectionView.contentOffset.y)
+        previousScrollY = scrollY
+        hiddenHeaderHeight = clampedHiddenHeaderHeight(hiddenHeaderHeight, scrollY: scrollY)
+        updateHeaderPresentation()
+    }
+
+    func updateScrollPosition(_ offset: CGFloat) {
+        guard !isUpdatingScrollGeometry else { return }
+        let scrollY = boundedScrollY(offset)
+        let previous = previousScrollY ?? scrollY
+        previousScrollY = scrollY
+
+        var hidden = hiddenHeaderHeight
+        if collectionView.isDragging || collectionView.isDecelerating {
+            hidden += scrollY - previous
+        }
+        hiddenHeaderHeight = clampedHiddenHeaderHeight(hidden, scrollY: scrollY)
+        updateHeaderPresentation()
+    }
+
     func setSaving(_ isSaving: Bool) {
         saveButton.isEnabled = !isSaving
         saveButton.alpha = isSaving ? 0.55 : 1
@@ -56,8 +112,7 @@ final class HomeView: UIView {
         title: String,
         message: String
     ) {
-        emptyTitle.text = title
-        emptyBody.text = message
+        emptyState.configure(title: title, message: message)
         emptyState.isHidden = false
     }
 
@@ -129,53 +184,89 @@ final class HomeView: UIView {
         )
     }
 
+    private func updateScrollGeometry() {
+        guard 0 < bounds.width, 0 < bounds.height else { return }
+        let height = headerContainer.bounds.height
+        let size = collectionView.bounds.size
+        guard height != headerHeight || size != scrollViewportSize else { return }
+
+        let offset = collectionView.contentOffset
+        let wasAtTop = offset.y <= -collectionView.contentInset.top + 1
+        let progress = headerHeight == 0 ? 0 : hiddenHeaderHeight / headerHeight
+        let wasUpdating = isUpdatingScrollGeometry
+        isUpdatingScrollGeometry = true
+        defer { isUpdatingScrollGeometry = wasUpdating }
+
+        headerHeight = height
+        scrollViewportSize = size
+        collectionView.contentInset.top = height
+        collectionView.layoutIfNeeded()
+        let scrollY = wasAtTop ? -height : boundedScrollY(offset.y)
+        let position = CGPoint(x: offset.x, y: scrollY)
+        if collectionView.contentOffset != position {
+            collectionView.setContentOffset(position, animated: false)
+        }
+        let currentScrollY = boundedScrollY(collectionView.contentOffset.y)
+        previousScrollY = currentScrollY
+        hiddenHeaderHeight = clampedHiddenHeaderHeight(progress * height, scrollY: currentScrollY)
+        updateHeaderPresentation()
+    }
+
+    private func boundedScrollY(_ offset: CGFloat) -> CGFloat {
+        let top = -collectionView.contentInset.top
+        let bottom = max(
+            top,
+            collectionView.contentSize.height - collectionView.bounds.height + collectionView.contentInset.bottom
+        )
+        return min(bottom, max(top, offset))
+    }
+
+    private func clampedHiddenHeaderHeight(
+        _ hidden: CGFloat,
+        scrollY: CGFloat
+    ) -> CGFloat {
+        guard 0 < collectionView.numberOfSections else { return 0 }
+        // 헤더는 목록이 상단 inset을 지나 스크롤된 거리보다 더 숨겨지지 않는다.
+        return max(0, min(headerHeight, hidden, scrollY + collectionView.contentInset.top))
+    }
+
+    private func updateHeaderPresentation() {
+        headerContainer.transform = CGAffineTransform(translationX: 0, y: -hiddenHeaderHeight)
+        collectionView.verticalScrollIndicatorInsets.top = max(0, headerHeight - hiddenHeaderHeight)
+    }
+
     private func configureAppearance() {
         backgroundColor = UIColor(resource: .homeCanvas)
-
-        contentStack.axis = .vertical
-        contentStack.alignment = .fill
-        contentStack.distribution = .fill
+        headerContainer.backgroundColor = backgroundColor
+        headerContainer.isUserInteractionEnabled = false
 
         collectionView.backgroundColor = .clear
+        collectionView.contentInsetAdjustmentBehavior = .never
         collectionView.alwaysBounceVertical = true
         collectionView.showsVerticalScrollIndicator = false
 
-        emptyState.axis = .vertical
-        emptyState.alignment = .center
-        emptyState.spacing = 10
-        emptyState.isHidden = true
-
-        emptyTitle.font = .systemFont(ofSize: 21, weight: .bold)
-        emptyTitle.textColor = UIColor(resource: .homePrimaryText)
-        emptyTitle.textAlignment = .center
-        emptyTitle.numberOfLines = 0
-        emptyBody.font = .systemFont(ofSize: 15)
-        emptyBody.textColor = UIColor(resource: .homeSecondaryText)
-        emptyBody.textAlignment = .center
-        emptyBody.numberOfLines = 0
-
-        saveBar.backgroundColor = UIColor(resource: .homeBottomBar)
-        saveBar.layer.cornerRadius = 22
-        saveBar.layer.shadowColor = UIColor(resource: .homeShadow).cgColor
-        saveBar.layer.shadowOpacity = 0.18
-        saveBar.layer.shadowRadius = 15
-        saveBar.layer.shadowOffset = CGSize(width: 0, height: 8)
+        saveButton.layer.shadowColor = UIColor(resource: .homeShadow).cgColor
+        saveButton.layer.shadowOpacity = 0.18
+        saveButton.layer.shadowRadius = 15
+        saveButton.layer.shadowOffset = CGSize(width: 0, height: 8)
 
         var configuration = UIButton.Configuration.plain()
-        configuration.title = "현재 클립보드 저장"
-        configuration.image = UIImage(systemName: "doc.badge.plus")
+        var title = AttributedString("현재 클립보드 저장")
+        title.font = .systemFont(ofSize: 17, weight: .semibold)
+        configuration.attributedTitle = title
+        configuration.image = Self.saveIcon
         configuration.imagePadding = 9
         configuration.baseForegroundColor = UIColor(resource: .homeBottomText)
+        configuration.background.backgroundColor = UIColor(resource: .homeBottomBar)
+        configuration.background.cornerRadius = 22
+        configuration.cornerStyle = .fixed
         saveButton.configuration = configuration
-        saveButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        saveButton.backgroundColor = UIColor(resource: .homeOnDark).withAlphaComponent(0.1)
-        saveButton.layer.cornerRadius = 17
 
-        lock.tintColor = UIColor(resource: .homeBottomText).withAlphaComponent(0.72)
+        lock.tintColor = UIColor(resource: .homePrivacyText)
         lock.contentMode = .scaleAspectFit
         privacy.text = "이 기기에만 저장됩니다"
         privacy.font = .systemFont(ofSize: 12)
-        privacy.textColor = UIColor(resource: .homeBottomText).withAlphaComponent(0.72)
+        privacy.textColor = UIColor(resource: .homePrivacyText)
         privacyRow.axis = .horizontal
         privacyRow.alignment = .center
         privacyRow.spacing = 6
@@ -183,8 +274,9 @@ final class HomeView: UIView {
         feedbackView.backgroundColor = UIColor(resource: .homeFeedbackSuccess)
         feedbackView.layer.cornerRadius = 12
         feedbackView.isHidden = true
+        feedbackView.isUserInteractionEnabled = false
         feedbackLabel.font = .systemFont(ofSize: 14, weight: .medium)
-        feedbackLabel.textColor = UIColor(resource: .homeOnDark)
+        feedbackLabel.textColor = UIColor(resource: .homeBottomText)
         feedbackLabel.textAlignment = .center
         feedbackLabel.numberOfLines = 0
     }
@@ -200,12 +292,11 @@ final class HomeView: UIView {
     }
 
     private func makeHierarchy() {
-        addSubview(contentStack)
-        contentStack.addArrangedSubview(titleHeader)
-        contentStack.addArrangedSubview(collectionView)
+        addSubview(collectionView)
+        addLayoutGuide(contentArea)
         addSubview(emptyState)
-        emptyState.addArrangedSubview(emptyTitle)
-        emptyState.addArrangedSubview(emptyBody)
+        addSubview(headerContainer)
+        headerContainer.addSubview(titleHeader)
         addSubview(saveBar)
         saveBar.addSubview(saveButton)
         saveBar.addSubview(privacyRow)
@@ -214,7 +305,7 @@ final class HomeView: UIView {
     }
 
     private func makeLayout() {
-        contentStack.translatesAutoresizingMaskIntoConstraints = false
+        headerContainer.translatesAutoresizingMaskIntoConstraints = false
         titleHeader.translatesAutoresizingMaskIntoConstraints = false
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         emptyState.translatesAutoresizingMaskIntoConstraints = false
@@ -226,26 +317,36 @@ final class HomeView: UIView {
         feedbackLabel.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            contentStack.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
-            contentStack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            contentStack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            contentStack.bottomAnchor.constraint(equalTo: saveBar.topAnchor, constant: -12),
-            titleHeader.heightAnchor.constraint(equalToConstant: 68),
+            collectionView.topAnchor.constraint(equalTo: topAnchor),
+            collectionView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: saveBar.topAnchor, constant: -12),
+            headerContainer.topAnchor.constraint(equalTo: topAnchor),
+            headerContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
+            headerContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
+            titleHeader.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
+            titleHeader.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
+            titleHeader.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
+            titleHeader.bottomAnchor.constraint(equalTo: headerContainer.bottomAnchor),
+            contentArea.topAnchor.constraint(equalTo: headerContainer.bottomAnchor),
+            contentArea.leadingAnchor.constraint(equalTo: collectionView.leadingAnchor),
+            contentArea.trailingAnchor.constraint(equalTo: collectionView.trailingAnchor),
+            contentArea.bottomAnchor.constraint(equalTo: saveBar.topAnchor, constant: -12),
             saveBar.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
             saveBar.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
             saveBar.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -12),
-            saveButton.topAnchor.constraint(equalTo: saveBar.topAnchor, constant: 6),
-            saveButton.leadingAnchor.constraint(equalTo: saveBar.leadingAnchor, constant: 6),
-            saveButton.trailingAnchor.constraint(equalTo: saveBar.trailingAnchor, constant: -6),
+            saveButton.topAnchor.constraint(equalTo: saveBar.topAnchor),
+            saveButton.leadingAnchor.constraint(equalTo: saveBar.leadingAnchor),
+            saveButton.trailingAnchor.constraint(equalTo: saveBar.trailingAnchor),
             saveButton.heightAnchor.constraint(equalToConstant: 54),
-            privacyRow.topAnchor.constraint(equalTo: saveButton.bottomAnchor),
+            privacyRow.topAnchor.constraint(equalTo: saveButton.bottomAnchor, constant: 4),
             privacyRow.centerXAnchor.constraint(equalTo: saveBar.centerXAnchor),
             privacyRow.heightAnchor.constraint(equalToConstant: 30),
             privacyRow.bottomAnchor.constraint(equalTo: saveBar.bottomAnchor),
             lock.widthAnchor.constraint(equalToConstant: 10),
             lock.heightAnchor.constraint(equalToConstant: 12),
             emptyState.centerXAnchor.constraint(equalTo: collectionView.centerXAnchor),
-            emptyState.centerYAnchor.constraint(equalTo: collectionView.centerYAnchor, constant: 24),
+            emptyState.centerYAnchor.constraint(equalTo: contentArea.centerYAnchor, constant: 24),
             emptyState.leadingAnchor.constraint(greaterThanOrEqualTo: collectionView.leadingAnchor, constant: 40),
             emptyState.trailingAnchor.constraint(lessThanOrEqualTo: collectionView.trailingAnchor, constant: -40),
             feedbackView.centerXAnchor.constraint(equalTo: centerXAnchor),
