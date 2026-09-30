@@ -8,6 +8,14 @@
 import UIKit
 
 enum HomeCardFormat {
+    /// 웹 링크 클립에서 따옴표 대신 표시하는 아이콘입니다.
+    static func linkIcon(pointSize: CGFloat) -> UIImage? {
+        UIImage(
+            systemName: "globe",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: pointSize, weight: .semibold)
+        )
+    }
+
     static func time(
         for date: Date,
         now: Date
@@ -20,6 +28,21 @@ enum HomeCardFormat {
             return DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short)
         }
         return DateFormatter.localizedString(from: date, dateStyle: .medium, timeStyle: .short)
+    }
+
+    /// 강조 서식이 들어간 문자열의 높이입니다. 문자열의 모든 구간에 글꼴이 지정돼 있어야 정확합니다.
+    static func height(
+        for text: NSAttributedString,
+        font: UIFont,
+        width: CGFloat,
+        lines: Int
+    ) -> CGFloat {
+        let bounds = text.boundingRect(
+            with: CGSize(width: max(1, width), height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        return min(ceil(font.lineHeight * CGFloat(lines)), max(ceil(font.lineHeight), ceil(bounds.height)))
     }
 
     static func height(

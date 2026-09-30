@@ -19,6 +19,7 @@ final class HomePinnedClipCell: UIView {
     private let visualBox = UIView()
     private let thumbnailView = UIImageView()
     private let quote = UILabel()
+    private let linkIcon = UIImageView()
     private let name = UILabel()
     private let metadata = UILabel()
     private lazy var textStack = UIStackView(arrangedSubviews: [name, metadata])
@@ -52,7 +53,9 @@ final class HomePinnedClipCell: UIView {
         switch clip.content {
         case .text(let text):
             representedKey = nil
-            quote.isHidden = false
+            let isWebLink = clip.content.isWebLink
+            quote.isHidden = isWebLink
+            linkIcon.isHidden = !isWebLink
             thumbnailView.isHidden = true
             name.text = clip.name ?? text
             metadata.text = "텍스트 · \(HomeCardFormat.time(for: clip.createdAt, now: now))"
@@ -60,6 +63,7 @@ final class HomePinnedClipCell: UIView {
         case .image:
             representedKey = key
             quote.isHidden = true
+            linkIcon.isHidden = true
             thumbnailView.isHidden = false
             thumbnailView.image = thumbnail
             name.text = clip.name ?? "이름 없는 이미지"
@@ -84,6 +88,11 @@ final class HomePinnedClipCell: UIView {
         quote.textColor = UIColor(resource: .homeMarkBackground)
         quote.textAlignment = .center
 
+        linkIcon.image = HomeCardFormat.linkIcon(pointSize: 24)
+        linkIcon.tintColor = UIColor(resource: .homeMarkBackground)
+        linkIcon.contentMode = .scaleAspectFit
+        linkIcon.isHidden = true
+
         name.font = Self.nameFont
         name.textColor = UIColor(resource: .homePrimaryText)
         name.lineBreakMode = .byTruncatingTail
@@ -103,6 +112,7 @@ final class HomePinnedClipCell: UIView {
         card.addSubview(visualBox)
         visualBox.addSubview(thumbnailView)
         visualBox.addSubview(quote)
+        visualBox.addSubview(linkIcon)
         card.addSubview(textStack)
     }
 
@@ -111,6 +121,7 @@ final class HomePinnedClipCell: UIView {
         visualBox.translatesAutoresizingMaskIntoConstraints = false
         thumbnailView.translatesAutoresizingMaskIntoConstraints = false
         quote.translatesAutoresizingMaskIntoConstraints = false
+        linkIcon.translatesAutoresizingMaskIntoConstraints = false
         textStack.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
@@ -128,6 +139,10 @@ final class HomePinnedClipCell: UIView {
             thumbnailView.bottomAnchor.constraint(equalTo: visualBox.bottomAnchor),
             quote.centerXAnchor.constraint(equalTo: visualBox.centerXAnchor),
             quote.centerYAnchor.constraint(equalTo: visualBox.centerYAnchor),
+            linkIcon.centerXAnchor.constraint(equalTo: visualBox.centerXAnchor),
+            linkIcon.centerYAnchor.constraint(equalTo: visualBox.centerYAnchor),
+            linkIcon.widthAnchor.constraint(equalToConstant: 28),
+            linkIcon.heightAnchor.constraint(equalToConstant: 28),
             textStack.leadingAnchor.constraint(equalTo: visualBox.trailingAnchor, constant: 10),
             textStack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -12),
             textStack.centerYAnchor.constraint(equalTo: card.centerYAnchor)
