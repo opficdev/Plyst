@@ -11,7 +11,7 @@ import UIKit
 
 @MainActor
 final class HomeViewController: ReactorViewController<HomeReactor> {
-    private lazy var homeView = HomeView(frame: .zero)
+    private lazy var homeView: any HomeViewable = HomeView(frame: .zero)
     private var collectionView: UICollectionView { homeView.collectionView }
     private let thumbnailCache = NSCache<NSString, UIImage>()
     private lazy var timeline = HomeTimelineScheduler { [weak self] now in
@@ -43,7 +43,16 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     }
 
     override func loadView() {
-        homeView.delegate = self
+        homeView.setOnSave { [weak self] in
+            self?.reactor.action.onNext(.saveCurrentClipboard)
+        }
+        homeView.setOnSearch { [weak self] in
+            guard let self else { return }
+            navigationController?.pushViewController(makeSearchViewController(), animated: true)
+        }
+        homeView.setOnSelectFilter { [weak self] filter in
+            self?.reactor.action.onNext(.selectFilter(filter))
+        }
         homeView.collectionView.dataSource = self
         homeView.collectionView.delegate = self
         homeView.layout.delegate = self
@@ -180,7 +189,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     private func pinnedRowThumbnailKey(for clip: Clip) -> HomeThumbnailKey? {
         guard case .image(let image) = clip.content else { return nil }
-        let pixels = max(1, Int(ceil(HomePinnedRowView.thumbnailDimension * traitCollection.displayScale)))
+        let pixels = max(1, Int(ceil(homeView.pinnedRowType.thumbnailDimension * traitCollection.displayScale)))
         return HomeThumbnailKey(
             clipID: clip.id,
             fileID: image.fileID,
@@ -210,23 +219,6 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
         guard case .image(let image) = clip.content else { return nil }
         let pixels = max(1, Int(ceil((width - 12) * traitCollection.displayScale)))
         return HomeThumbnailKey(clipID: clip.id, fileID: image.fileID, maximumPixelDimension: pixels)
-    }
-}
-
-extension HomeViewController: HomeViewDelegate {
-    func homeViewDidRequestSave(_ view: HomeView) {
-        reactor.action.onNext(.saveCurrentClipboard)
-    }
-
-    func homeViewDidRequestSearch(_ view: HomeView) {
-        navigationController?.pushViewController(makeSearchViewController(), animated: true)
-    }
-
-    func homeView(
-        _ view: HomeView,
-        didSelectFilter filter: HomeFilter
-    ) {
-        reactor.action.onNext(.selectFilter(filter))
     }
 }
 
@@ -267,9 +259,9 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         switch clip.content {
         case .text:
             guard let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: HomeTextCell.reuseIdentifier,
+                withReuseIdentifier: homeView.textCellType.reuseIdentifier,
                 for: indexPath
-            ) as? any HomeTextCellable else { preconditionFailure("HomeTextCell registration mismatch") }
+            ) as? any HomeTextCellable else { preconditionFailure("\(homeView.textCellType) registration mismatch") }
             cell.configure(
                 with: clip,
                 now: reactor.currentState.now,
@@ -280,9 +272,9 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
             return cell
         case .image:
             guard let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: HomeImageCell.reuseIdentifier,
+                withReuseIdentifier: homeView.imageCellType.reuseIdentifier,
                 for: indexPath
-            ) as? any HomeImageCellable else { preconditionFailure("HomeImageCell registration mismatch") }
+            ) as? any HomeImageCellable else { preconditionFailure("\(homeView.imageCellType) registration mismatch") }
             let width = max(1, (collectionView.bounds.width - 42) / 2)
             if let key = thumbnailKey(for: clip, width: width) {
                 cell.configure(
@@ -307,9 +299,9 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         case HomeGridLayout.pinnedRowKind:
             guard let row = collectionView.dequeueReusableSupplementaryView(
                 ofKind: kind,
-                withReuseIdentifier: HomePinnedRowView.reuseIdentifier,
+                withReuseIdentifier: homeView.pinnedRowType.reuseIdentifier,
                 for: indexPath
-            ) as? any HomePinnedRowViewable else { preconditionFailure("HomePinnedRowView registration mismatch") }
+            ) as? any HomePinnedRowViewable else { preconditionFailure("\(homeView.pinnedRowType) registration mismatch") }
             row.setOnScroll { [weak self] row in
                 guard let self else { return }
                 requestPinnedRowThumbnails(row, state: reactor.currentState)
@@ -320,9 +312,9 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         default:
             guard let header = collectionView.dequeueReusableSupplementaryView(
                 ofKind: kind,
-                withReuseIdentifier: HomeSectionHeaderView.reuseIdentifier,
+                withReuseIdentifier: homeView.sectionHeaderType.reuseIdentifier,
                 for: indexPath
-            ) as? any HomeSectionHeaderViewable else { preconditionFailure("HomeSectionHeaderView registration mismatch") }
+            ) as? any HomeSectionHeaderViewable else { preconditionFailure("\(homeView.sectionHeaderType) registration mismatch") }
             header.configure(title: sections[indexPath.section - pinnedRowSectionCount].kind.title)
             return header
         }
@@ -371,13 +363,24 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         let clip = clip(at: indexPath)
         switch clip.content {
         case .text:
-            return HomeTextCell.height(for: clip, width: width)
+            return homeView.textCellType.height(
+                for: clip,
+                width: width,
+                name: nil,
+                body: nil,
+                showsCopy: false
+            )
         case .image:
-            return HomeImageCell.height(for: clip, width: width)
+            return homeView.imageCellType.height(
+                for: clip,
+                width: width,
+                name: nil,
+                showsCopy: false
+            )
         }
     }
 
     func homeLayoutHeightForPinnedRow(_ layout: HomeGridLayout) -> CGFloat {
-        pinnedClips.isEmpty ? 0 : HomePinnedRowView.height
+        pinnedClips.isEmpty ? 0 : homeView.pinnedRowType.height
     }
 }
