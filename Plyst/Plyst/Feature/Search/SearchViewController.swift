@@ -359,8 +359,4 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
             )
         }
     }
-
-    func homeLayoutHeightForPinnedRow(_ layout: HomeGridLayout) -> CGFloat {
-        0
-    }
 }
