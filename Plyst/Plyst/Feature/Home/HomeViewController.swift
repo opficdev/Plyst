@@ -202,6 +202,18 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         homeView.updateScrollPosition(scrollView.contentOffset.y)
     }
 
+    func scrollViewDidEndDragging(
+        _ scrollView: UIScrollView,
+        willDecelerate decelerate: Bool
+    ) {
+        guard !decelerate else { return }
+        homeView.snapHeader()
+    }
+
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        homeView.snapHeader()
+    }
+
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         sections.count
     }
