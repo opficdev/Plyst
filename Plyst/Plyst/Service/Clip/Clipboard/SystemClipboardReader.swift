@@ -10,6 +10,10 @@ import UniformTypeIdentifiers
 
 /// 호출자의 actor 밖에서 첫 항목의 형식을 확인하고 읽습니다. 변경을 감시하거나 읽기를 재시도하지 않습니다.
 struct SystemClipboardReader: ClipboardReader {
+    // UIPasteboard.typeListString과 typeListURL은 Swift 6에서 공유 가변 상태로 취급되어 같은 형식 목록을 값으로 둡니다.
+    private static let textTypes = [UTType.utf8PlainText.identifier, UTType.plainText.identifier]
+    private static let urlTypes = [UTType.url.identifier]
+
     @concurrent
     func read() async throws -> ClipboardReadResult {
         try Task.checkCancellation()
@@ -31,11 +35,9 @@ struct SystemClipboardReader: ClipboardReader {
             guard let data = pasteboard.data(forPasteboardType: imageType) else { return .accessFailed }
             return .image(data)
         }
-        guard let textTypes = UIPasteboard.typeListString as? [String],
-              let urlTypes = UIPasteboard.typeListURL as? [String] else { return .accessFailed }
         // hasStrings와 hasURLs는 전체 항목을 확인하므로 첫 항목의 형식만 검사합니다.
-        let hasText = pasteboard.contains(pasteboardTypes: textTypes)
-        let hasURL = pasteboard.contains(pasteboardTypes: urlTypes)
+        let hasText = pasteboard.contains(pasteboardTypes: Self.textTypes)
+        let hasURL = pasteboard.contains(pasteboardTypes: Self.urlTypes)
         guard hasText || hasURL else { return .unsupported }
 
         let text = hasText ? pasteboard.string : nil
