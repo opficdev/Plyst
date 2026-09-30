@@ -16,6 +16,7 @@ final class HomeTextCell: UICollectionViewCell {
 
     private let card = UIView()
     private let quote = UILabel()
+    private let linkIcon = UIImageView()
     private let name = UILabel()
     private let body = UILabel()
     private let metadata = UILabel()
@@ -58,6 +59,9 @@ final class HomeTextCell: UICollectionViewCell {
         onCopy: (() -> Void)? = nil
     ) {
         guard case .text(let text) = clip.content else { return }
+        let isWebLink = clip.content.isWebLink
+        quote.isHidden = isWebLink
+        linkIcon.isHidden = !isWebLink
         if let attributedName {
             name.attributedText = attributedName
         } else {
@@ -117,6 +121,11 @@ final class HomeTextCell: UICollectionViewCell {
         quote.font = UIFont(name: "Georgia-Bold", size: 26) ?? .systemFont(ofSize: 26, weight: .bold)
         quote.textColor = UIColor(resource: .homeMarkBackground)
 
+        linkIcon.image = HomeCardFormat.linkIcon(pointSize: 20)
+        linkIcon.tintColor = UIColor(resource: .homeMarkBackground)
+        linkIcon.contentMode = .scaleAspectFit
+        linkIcon.isHidden = true
+
         name.font = Self.nameFont
         name.textColor = UIColor(resource: .homePrimaryText)
         name.lineBreakMode = .byTruncatingTail
@@ -144,12 +153,14 @@ final class HomeTextCell: UICollectionViewCell {
     private func makeHierarchy() {
         contentView.addSubview(card)
         card.addSubview(quote)
+        card.addSubview(linkIcon)
         card.addSubview(stack)
     }
 
     private func makeLayout() {
         card.translatesAutoresizingMaskIntoConstraints = false
         quote.translatesAutoresizingMaskIntoConstraints = false
+        linkIcon.translatesAutoresizingMaskIntoConstraints = false
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
@@ -160,6 +171,10 @@ final class HomeTextCell: UICollectionViewCell {
             // 26pt 따옴표 영역(상단 14pt 포함, 줄 높이 0.6배)에 맞춰 기준선을 둔다.
             quote.firstBaselineAnchor.constraint(equalTo: card.topAnchor, constant: 31),
             quote.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+            linkIcon.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+            linkIcon.topAnchor.constraint(equalTo: card.topAnchor, constant: 12),
+            linkIcon.widthAnchor.constraint(equalToConstant: 22),
+            linkIcon.heightAnchor.constraint(equalToConstant: 22),
             stack.topAnchor.constraint(equalTo: card.topAnchor, constant: 36),
             stack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
             stack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -12),

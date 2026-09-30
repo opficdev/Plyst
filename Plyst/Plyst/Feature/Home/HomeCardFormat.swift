@@ -8,6 +8,14 @@
 import UIKit
 
 enum HomeCardFormat {
+    /// 웹 링크 클립에서 따옴표 대신 표시하는 아이콘입니다.
+    static func linkIcon(pointSize: CGFloat) -> UIImage? {
+        UIImage(
+            systemName: "globe",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: pointSize, weight: .semibold)
+        )
+    }
+
     static func time(
         for date: Date,
         now: Date

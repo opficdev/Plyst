@@ -25,6 +25,39 @@ final class ClipContentTests: XCTestCase {
         XCTAssertEqual(content, .text(text))
     }
 
+    func testSingleHTTPAndHTTPSURLsAreWebLinksRegardlessOfSurroundingWhitespaceAndCase() {
+        let texts = [
+            "https://example.com",
+            " \nhttps://example.com/path?query=value#fragment\t ",
+            "HTTP://EXAMPLE.COM/Path",
+            "http://localhost:8080"
+        ]
+
+        for text in texts {
+            XCTAssertTrue(ClipContent.text(text).isWebLink, text)
+        }
+    }
+
+    func testTextThatIsNotASingleWebURLIsNotAWebLink() {
+        let texts = [
+            "example.com",
+            "ftp://example.com",
+            "mailto:someone@example.com",
+            "https://",
+            "https:// example.com",
+            "see https://example.com",
+            "https://a.example.com https://b.example.com",
+            "https://example.com\nsecond line",
+            "메모",
+            ""
+        ]
+
+        for text in texts {
+            XCTAssertFalse(ClipContent.text(text).isWebLink, text)
+        }
+        XCTAssertFalse(ClipContent.image(makeImage()).isWebLink)
+    }
+
     func testImageMetadataRejectsMissingTypeAndNonpositiveDimensionsOrSize() {
         let images = [
             makeImage(contentType: ""),
