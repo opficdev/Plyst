@@ -30,6 +30,8 @@ final class HomeView: UIView {
     private lazy var privacyRow = UIStackView(arrangedSubviews: [lock, privacy])
     private let feedbackView = UIView()
     private let feedbackLabel = UILabel()
+    private var isFeedbackVisible = false
+    private var feedbackAnimationID = UUID()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -67,15 +69,64 @@ final class HomeView: UIView {
         message: String,
         isSuccess: Bool
     ) {
+        feedbackAnimationID = UUID()
+        isFeedbackVisible = true
         feedbackLabel.text = message
         feedbackView.backgroundColor = isSuccess
             ? UIColor(resource: .homeFeedbackSuccess)
             : UIColor(resource: .homeFeedbackFailure)
-        feedbackView.isHidden = false
+        layoutIfNeeded()
+
+        feedbackView.layer.removeAllAnimations()
+        UIView.performWithoutAnimation {
+            feedbackView.transform = feedbackHiddenTransform()
+            feedbackView.alpha = 0
+            feedbackView.isHidden = false
+        }
+
+        UIView.animate(
+            withDuration: 0.25,
+            delay: 0,
+            options: [.allowUserInteraction, .curveEaseOut],
+            animations: { [weak self] in
+                self?.feedbackView.transform = .identity
+                self?.feedbackView.alpha = 1
+            }
+        )
     }
 
     func hideFeedback() {
-        feedbackView.isHidden = true
+        guard isFeedbackVisible else { return }
+        isFeedbackVisible = false
+        let id = UUID()
+        feedbackAnimationID = id
+        layoutIfNeeded()
+        let transform = feedbackHiddenTransform()
+
+        UIView.animate(
+            withDuration: 0.2,
+            delay: 0,
+            options: [.beginFromCurrentState, .allowUserInteraction, .curveEaseIn],
+            animations: { [weak self] in
+                self?.feedbackView.transform = transform
+                self?.feedbackView.alpha = 0
+            },
+            completion: { [weak self] _ in
+                guard let self,
+                      feedbackAnimationID == id,
+                      !isFeedbackVisible else { return }
+                feedbackView.isHidden = true
+                feedbackView.transform = .identity
+                feedbackView.alpha = 1
+            }
+        )
+    }
+
+    private func feedbackHiddenTransform() -> CGAffineTransform {
+        CGAffineTransform(
+            translationX: 0,
+            y: -16
+        )
     }
 
     private func configureAppearance() {
