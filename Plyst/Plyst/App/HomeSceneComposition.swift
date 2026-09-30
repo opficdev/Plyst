@@ -47,7 +47,20 @@ final class HomeSceneComposition {
             clipboard: clipboard,
             images: images
         )
-        let controller = HomeViewController(reactor: reactor)
+        // 검색 화면은 같은 저장소와 서비스 인스턴스를 공유합니다. 클로저는 Composition이 아니라 서비스만 캡처합니다.
+        let controller = HomeViewController(
+            reactor: reactor,
+            makeSearchViewController: { [storage, clipboard, images] in
+                SearchViewController(
+                    reactor: SearchReactor(
+                        storage: storage,
+                        history: storage,
+                        clipboard: clipboard,
+                        images: images
+                    )
+                )
+            }
+        )
         let navigation = UINavigationController(rootViewController: controller)
         navigation.setNavigationBarHidden(true, animated: false)
         return navigation

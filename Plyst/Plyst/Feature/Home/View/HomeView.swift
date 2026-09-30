@@ -10,6 +10,7 @@ import UIKit
 @MainActor
 protocol HomeViewDelegate: AnyObject {
     func homeViewDidRequestSave(_ view: HomeView)
+    func homeViewDidRequestSearch(_ view: HomeView)
     func homeView(
         _ view: HomeView,
         didSelectFilter filter: HomeFilter
@@ -364,6 +365,10 @@ final class HomeView: UIView {
         saveButton.addAction(UIAction { [weak self] _ in
             guard let self else { return }
             delegate?.homeViewDidRequestSave(self)
+        }, for: .touchUpInside)
+        titleHeader.searchButton.addAction(UIAction { [weak self] _ in
+            guard let self else { return }
+            delegate?.homeViewDidRequestSearch(self)
         }, for: .touchUpInside)
     }
 

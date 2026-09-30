@@ -8,6 +8,8 @@
 import UIKit
 
 final class HomeTitleHeaderView: UIView {
+    let searchButton = UIButton(type: .system)
+
     private let mark = UILabel()
     private let title = UILabel()
 
@@ -34,16 +36,30 @@ final class HomeTitleHeaderView: UIView {
         title.attributedText = NSAttributedString(string: "Plyst", attributes: [.kern: -1.12])
         title.font = .systemFont(ofSize: 32, weight: .heavy)
         title.textColor = UIColor(resource: .homePrimaryText)
+
+        var configuration = UIButton.Configuration.plain()
+        configuration.image = UIImage(
+            systemName: "magnifyingglass",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .semibold)
+        )
+        configuration.baseForegroundColor = UIColor(resource: .homePrimaryText)
+        configuration.background.backgroundColor = UIColor(resource: .homeCard)
+        configuration.background.strokeColor = UIColor(resource: .homeOutline)
+        configuration.background.strokeWidth = 1
+        configuration.cornerStyle = .capsule
+        searchButton.configuration = configuration
     }
 
     private func makeHierarchy() {
         addSubview(mark)
         addSubview(title)
+        addSubview(searchButton)
     }
 
     private func makeLayout() {
         mark.translatesAutoresizingMaskIntoConstraints = false
         title.translatesAutoresizingMaskIntoConstraints = false
+        searchButton.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             mark.topAnchor.constraint(equalTo: topAnchor),
@@ -52,7 +68,12 @@ final class HomeTitleHeaderView: UIView {
             mark.heightAnchor.constraint(equalToConstant: 34),
             title.centerYAnchor.constraint(equalTo: mark.centerYAnchor),
             title.leadingAnchor.constraint(equalTo: mark.trailingAnchor, constant: 10),
-            title.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20),
+            // 버튼은 헤더 높이를 정하는 제약에 넣지 않고 마크 기준으로만 배치합니다.
+            searchButton.centerYAnchor.constraint(equalTo: mark.centerYAnchor),
+            searchButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            searchButton.widthAnchor.constraint(equalToConstant: 44),
+            searchButton.heightAnchor.constraint(equalToConstant: 44),
+            title.trailingAnchor.constraint(lessThanOrEqualTo: searchButton.leadingAnchor, constant: -10),
             bottomAnchor.constraint(equalTo: title.bottomAnchor, constant: 16)
         ])
     }

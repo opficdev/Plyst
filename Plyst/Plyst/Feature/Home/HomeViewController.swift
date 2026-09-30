@@ -24,9 +24,23 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     private var renderedFilter: HomeFilter?
     private var presentedFeedbackID: UUID?
     private var feedbackTask: Task<Void, Never>?
+    private let makeSearchViewController: @MainActor () -> UIViewController
 
     /// 상단 고정 항목이 있으면 section 0을 그 전용으로 두어 시간순 구간이 없어도 표시되게 한다.
     private var pinnedRowSectionCount: Int { pinnedClips.isEmpty ? 0 : 1 }
+
+    init(
+        reactor: HomeReactor,
+        makeSearchViewController: @escaping @MainActor () -> UIViewController
+    ) {
+        self.makeSearchViewController = makeSearchViewController
+        super.init(reactor: reactor)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is unavailable")
+    }
 
     override func loadView() {
         homeView.delegate = self
@@ -202,6 +216,10 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 extension HomeViewController: HomeViewDelegate {
     func homeViewDidRequestSave(_ view: HomeView) {
         reactor.action.onNext(.saveCurrentClipboard)
+    }
+
+    func homeViewDidRequestSearch(_ view: HomeView) {
+        navigationController?.pushViewController(makeSearchViewController(), animated: true)
     }
 
     func homeView(
