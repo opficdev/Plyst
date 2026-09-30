@@ -79,7 +79,7 @@ final class HomeTitleHeaderView: UIView {
     }
 }
 
-final class HomeSectionHeaderView: UICollectionReusableView, ReuseIdentifiable {
+final class HomeSectionHeaderView: UICollectionReusableView, HomeSectionHeaderViewable {
     private let title = UILabel()
     private let rule = UIView()
 

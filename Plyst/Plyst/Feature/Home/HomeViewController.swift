@@ -138,7 +138,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     private func updateVisibleThumbnails(state: HomeReactor.State) {
         for cell in collectionView.visibleCells {
-            guard let cell = cell as? HomeImageCell,
+            guard let cell = cell as? any HomeImageCellViewable,
                   let key = cell.representedKey,
                   let data = state.thumbnails[key] else { continue }
             let cacheKey = "\(key.fileID.uuidString)-\(key.maximumPixelDimension)" as NSString
@@ -149,13 +149,13 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
             }
         }
         for view in collectionView.visibleSupplementaryViews(ofKind: HomeGridLayout.pinnedRowKind) {
-            guard let row = view as? HomePinnedRowView else { continue }
+            guard let row = view as? any HomePinnedRowViewable else { continue }
             configurePinnedRow(row, state: state)
         }
     }
 
     private func configurePinnedRow(
-        _ row: HomePinnedRowView,
+        _ row: any HomePinnedRowViewable,
         state: HomeReactor.State
     ) {
         row.configure(
@@ -169,7 +169,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     /// 썸네일 보관 개수보다 고정 이미지가 많아도 요청과 제거가 반복되지 않도록 보이는 카드만 요청한다.
     private func requestPinnedRowThumbnails(
-        _ row: HomePinnedRowView,
+        _ row: any HomePinnedRowViewable,
         state: HomeReactor.State
     ) {
         for clip in row.visibleClips() {
@@ -180,7 +180,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     private func pinnedRowThumbnailKey(for clip: Clip) -> HomeThumbnailKey? {
         guard case .image(let image) = clip.content else { return nil }
-        let pixels = max(1, Int(ceil(HomePinnedClipView.thumbnailDimension * traitCollection.displayScale)))
+        let pixels = max(1, Int(ceil(HomePinnedRowView.thumbnailDimension * traitCollection.displayScale)))
         return HomeThumbnailKey(
             clipID: clip.id,
             fileID: image.fileID,
@@ -269,21 +269,29 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
             guard let cell = collectionView.dequeueReusableCell(
                 withReuseIdentifier: HomeTextCell.reuseIdentifier,
                 for: indexPath
-            ) as? HomeTextCell else { preconditionFailure("HomeTextCell registration mismatch") }
-            cell.configure(with: clip, now: reactor.currentState.now)
+            ) as? any HomeTextCellViewable else { preconditionFailure("HomeTextCell registration mismatch") }
+            cell.configure(
+                with: clip,
+                now: reactor.currentState.now,
+                name: nil,
+                body: nil,
+                onCopy: nil
+            )
             return cell
         case .image:
             guard let cell = collectionView.dequeueReusableCell(
                 withReuseIdentifier: HomeImageCell.reuseIdentifier,
                 for: indexPath
-            ) as? HomeImageCell else { preconditionFailure("HomeImageCell registration mismatch") }
+            ) as? any HomeImageCellViewable else { preconditionFailure("HomeImageCell registration mismatch") }
             let width = max(1, (collectionView.bounds.width - 42) / 2)
             if let key = thumbnailKey(for: clip, width: width) {
                 cell.configure(
                     with: clip,
                     now: reactor.currentState.now,
                     key: key,
-                    thumbnail: thumbnail(for: key, state: reactor.currentState)
+                    thumbnail: thumbnail(for: key, state: reactor.currentState),
+                    name: nil,
+                    onCopy: nil
                 )
             }
             return cell
@@ -301,7 +309,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                 ofKind: kind,
                 withReuseIdentifier: HomePinnedRowView.reuseIdentifier,
                 for: indexPath
-            ) as? HomePinnedRowView else { preconditionFailure("HomePinnedRowView registration mismatch") }
+            ) as? any HomePinnedRowViewable else { preconditionFailure("HomePinnedRowView registration mismatch") }
             row.setOnScroll { [weak self] row in
                 guard let self else { return }
                 requestPinnedRowThumbnails(row, state: reactor.currentState)
@@ -314,7 +322,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                 ofKind: kind,
                 withReuseIdentifier: HomeSectionHeaderView.reuseIdentifier,
                 for: indexPath
-            ) as? HomeSectionHeaderView else { preconditionFailure("HomeSectionHeaderView registration mismatch") }
+            ) as? any HomeSectionHeaderViewable else { preconditionFailure("HomeSectionHeaderView registration mismatch") }
             header.configure(title: sections[indexPath.section - pinnedRowSectionCount].kind.title)
             return header
         }
@@ -325,7 +333,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         willDisplay cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
-        guard let cell = cell as? HomeImageCell,
+        guard let cell = cell as? any HomeImageCellViewable,
               let key = cell.representedKey,
               reactor.currentState.thumbnails[key] == nil else { return }
         reactor.action.onNext(.thumbnailRequested(key))
@@ -337,7 +345,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         forElementKind elementKind: String,
         at indexPath: IndexPath
     ) {
-        guard let row = view as? HomePinnedRowView else { return }
+        guard let row = view as? any HomePinnedRowViewable else { return }
         requestPinnedRowThumbnails(row, state: reactor.currentState)
     }
 
@@ -346,11 +354,11 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         didEndDisplaying cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
-        guard let cell = cell as? HomeImageCell,
+        guard let cell = cell as? any HomeImageCellViewable,
               let key = cell.representedKey else { return }
         Task { @MainActor [weak self] in
             guard let self,
-                  !self.collectionView.visibleCells.contains(where: { ($0 as? HomeImageCell)?.representedKey == key }) else { return }
+                  !self.collectionView.visibleCells.contains(where: { ($0 as? any HomeImageCellViewable)?.representedKey == key }) else { return }
             self.reactor.action.onNext(.thumbnailCancelled(key))
         }
     }

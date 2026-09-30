@@ -7,11 +7,15 @@
 
 import UIKit
 
-final class HomePinnedRowView: UICollectionReusableView, ReuseIdentifiable {
+final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
     private static let titleTopInset = CGFloat(20)
     private static let rowTopInset = CGFloat(14)
     private static let bottomInset = CGFloat(16)
     private static let titleFont = UIFont.monospacedSystemFont(ofSize: 11, weight: .semibold)
+
+    static var thumbnailDimension: CGFloat {
+        HomePinnedClipView.thumbnailDimension
+    }
 
     static var height: CGFloat {
         titleTopInset + ceil(titleFont.lineHeight) + rowTopInset + HomePinnedClipView.height + bottomInset
@@ -23,7 +27,7 @@ final class HomePinnedRowView: UICollectionReusableView, ReuseIdentifiable {
     private let stack = UIStackView()
     private var items = [HomePinnedClipView]()
     private var clips = [Clip]()
-    private var onScroll: (@MainActor (HomePinnedRowView) -> Void)?
+    private var onScroll: (@MainActor (any HomePinnedRowViewable) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -37,7 +41,7 @@ final class HomePinnedRowView: UICollectionReusableView, ReuseIdentifiable {
         fatalError("init(coder:) is unavailable")
     }
 
-    func setOnScroll(_ action: @escaping @MainActor (HomePinnedRowView) -> Void) {
+    func setOnScroll(_ action: @escaping @MainActor (any HomePinnedRowViewable) -> Void) {
         onScroll = action
     }
 
