@@ -150,7 +150,15 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
             key: { [weak self] clip in self?.pinnedRowThumbnailKey(for: clip) },
             thumbnail: { [weak self] key in self?.thumbnail(for: key, state: state) }
         )
-        for clip in pinnedClips {
+        requestPinnedRowThumbnails(row, state: state)
+    }
+
+    /// 썸네일 보관 개수보다 고정 이미지가 많아도 요청과 제거가 반복되지 않도록 보이는 카드만 요청한다.
+    private func requestPinnedRowThumbnails(
+        _ row: HomePinnedRowView,
+        state: HomeReactor.State
+    ) {
+        for clip in row.visibleClips() {
             guard let key = pinnedRowThumbnailKey(for: clip), state.thumbnails[key] == nil else { continue }
             reactor.action.onNext(.thumbnailRequested(key))
         }
@@ -201,6 +209,12 @@ extension HomeViewController: HomeViewDelegate {
         didSelectFilter filter: HomeFilter
     ) {
         reactor.action.onNext(.selectFilter(filter))
+    }
+}
+
+extension HomeViewController: HomePinnedRowViewDelegate {
+    func homePinnedRowViewDidScroll(_ view: HomePinnedRowView) {
+        requestPinnedRowThumbnails(view, state: reactor.currentState)
     }
 }
 
@@ -276,6 +290,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                 withReuseIdentifier: HomePinnedRowView.reuseIdentifier,
                 for: indexPath
             ) as? HomePinnedRowView else { preconditionFailure("HomePinnedRowView registration mismatch") }
+            row.delegate = self
             configurePinnedRow(row, state: reactor.currentState)
             return row
 
@@ -299,6 +314,16 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
               let key = cell.representedKey,
               reactor.currentState.thumbnails[key] == nil else { return }
         reactor.action.onNext(.thumbnailRequested(key))
+    }
+
+    func collectionView(
+        _ collectionView: UICollectionView,
+        willDisplaySupplementaryView view: UICollectionReusableView,
+        forElementKind elementKind: String,
+        at indexPath: IndexPath
+    ) {
+        guard let row = view as? HomePinnedRowView else { return }
+        requestPinnedRowThumbnails(row, state: reactor.currentState)
     }
 
     func collectionView(

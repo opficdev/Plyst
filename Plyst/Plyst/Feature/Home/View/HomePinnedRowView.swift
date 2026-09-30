@@ -7,6 +7,11 @@
 
 import UIKit
 
+@MainActor
+protocol HomePinnedRowViewDelegate: AnyObject {
+    func homePinnedRowViewDidScroll(_ view: HomePinnedRowView)
+}
+
 final class HomePinnedRowView: UICollectionReusableView {
     static let reuseIdentifier = String(describing: HomePinnedRowView.self)
     private static let titleTopInset = CGFloat(20)
@@ -18,11 +23,14 @@ final class HomePinnedRowView: UICollectionReusableView {
         titleTopInset + ceil(titleFont.lineHeight) + rowTopInset + HomePinnedClipCell.height + bottomInset
     }
 
+    weak var delegate: HomePinnedRowViewDelegate?
+
     private let title = UILabel()
     private let rule = UIView()
     private let scrollView = UIScrollView()
     private let stack = UIStackView()
     private var cells = [HomePinnedClipCell]()
+    private var clips = [Clip]()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -42,6 +50,7 @@ final class HomePinnedRowView: UICollectionReusableView {
         key: (Clip) -> HomeThumbnailKey?,
         thumbnail: (HomeThumbnailKey) -> UIImage?
     ) {
+        self.clips = clips
         while cells.count < clips.count { cells.append(makeCell()) }
         while clips.count < cells.count { cells.removeLast().removeFromSuperview() }
 
@@ -54,6 +63,15 @@ final class HomePinnedRowView: UICollectionReusableView {
                 thumbnail: clipKey.flatMap(thumbnail)
             )
         }
+    }
+
+    /// 가로 스크롤 영역에 보이는 카드의 클립을 반환한다. 썸네일 요청을 화면에 보이는 카드로 한정할 때 사용한다.
+    func visibleClips() -> [Clip] {
+        layoutIfNeeded()
+        let visible = scrollView.convert(scrollView.bounds, to: stack)
+        return zip(clips, cells)
+            .filter { visible.intersects($0.1.frame) }
+            .map(\.0)
     }
 
     private func makeCell() -> HomePinnedClipCell {
@@ -75,6 +93,7 @@ final class HomePinnedRowView: UICollectionReusableView {
         )
         rule.backgroundColor = UIColor(resource: .homeOutline)
         scrollView.showsHorizontalScrollIndicator = false
+        scrollView.delegate = self
         stack.axis = .horizontal
         stack.spacing = 10
     }
@@ -109,5 +128,11 @@ final class HomePinnedRowView: UICollectionReusableView {
             stack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -20),
             stack.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
         ])
+    }
+}
+
+extension HomePinnedRowView: UIScrollViewDelegate {
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        delegate?.homePinnedRowViewDidScroll(self)
     }
 }
