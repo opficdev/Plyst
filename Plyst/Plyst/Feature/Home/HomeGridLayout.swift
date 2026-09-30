@@ -42,6 +42,8 @@ final class HomeGridLayout: UICollectionViewLayout {
         var verticalOffset = CGFloat.zero
 
         let pinnedRowHeight = delegate?.homeLayoutHeightForPinnedRow(self) ?? 0
+        // 상단 고정 항목이 있으면 section 0을 그 전용으로 두고 시간순 구간은 section 1부터 시작한다.
+        let firstTimelineSection = 0 < pinnedRowHeight ? 1 : 0
         if 0 < pinnedRowHeight {
             let attributes = UICollectionViewLayoutAttributes(
                 forSupplementaryViewOfKind: Self.pinnedRowKind,
@@ -57,7 +59,7 @@ final class HomeGridLayout: UICollectionViewLayout {
             verticalOffset = pinnedRowHeight
         }
 
-        for section in 0..<collectionView.numberOfSections {
+        for section in 0..<collectionView.numberOfSections where firstTimelineSection <= section {
             let headerPath = IndexPath(item: 0, section: section)
             let header = UICollectionViewLayoutAttributes(
                 forSupplementaryViewOfKind: Self.headerKind,

@@ -25,6 +25,9 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     private var presentedFeedbackID: UUID?
     private var feedbackTask: Task<Void, Never>?
 
+    /// 상단 고정 항목이 있으면 section 0을 그 전용으로 두어 시간순 구간이 없어도 표시되게 한다.
+    private var pinnedRowSectionCount: Int { pinnedClips.isEmpty ? 0 : 1 }
+
     override func loadView() {
         homeView.delegate = self
         homeView.collectionView.dataSource = self
@@ -174,6 +177,10 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
         return image
     }
 
+    private func clip(at indexPath: IndexPath) -> Clip {
+        sections[indexPath.section - pinnedRowSectionCount].clips[indexPath.item]
+    }
+
     private func thumbnailKey(
         for clip: Clip,
         width: CGFloat
@@ -215,21 +222,22 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
     }
 
     func numberOfSections(in collectionView: UICollectionView) -> Int {
-        sections.count
+        pinnedRowSectionCount + sections.count
     }
 
     func collectionView(
         _ collectionView: UICollectionView,
         numberOfItemsInSection section: Int
     ) -> Int {
-        sections[section].clips.count
+        guard pinnedRowSectionCount <= section else { return 0 }
+        return sections[section - pinnedRowSectionCount].clips.count
     }
 
     func collectionView(
         _ collectionView: UICollectionView,
         cellForItemAt indexPath: IndexPath
     ) -> UICollectionViewCell {
-        let clip = sections[indexPath.section].clips[indexPath.item]
+        let clip = clip(at: indexPath)
         switch clip.content {
         case .text:
             guard let cell = collectionView.dequeueReusableCell(
@@ -277,7 +285,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                 withReuseIdentifier: HomeSectionHeaderView.reuseIdentifier,
                 for: indexPath
             ) as? HomeSectionHeaderView else { preconditionFailure("HomeSectionHeaderView registration mismatch") }
-            header.configure(title: sections[indexPath.section].kind.title)
+            header.configure(title: sections[indexPath.section - pinnedRowSectionCount].kind.title)
             return header
         }
     }
@@ -312,7 +320,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         heightForItemAt indexPath: IndexPath,
         width: CGFloat
     ) -> CGFloat {
-        let clip = sections[indexPath.section].clips[indexPath.item]
+        let clip = clip(at: indexPath)
         switch clip.content {
         case .text:
             return HomeTextCell.height(for: clip, width: width)
