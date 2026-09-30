@@ -16,10 +16,6 @@ protocol HomeViewable: UIView {
     var sectionHeaderType: any HomeSectionHeaderViewable.Type { get }
     var pinnedRowType: any HomePinnedRowViewable.Type { get }
 
-    func setOnSave(_ action: @escaping @MainActor () -> Void)
-    func setOnSearch(_ action: @escaping @MainActor () -> Void)
-    func setOnSelectFilter(_ action: @escaping @MainActor (HomeFilter) -> Void)
-
     func reloadContent()
     func updateScrollPosition(_ offset: CGFloat)
     func snapHeader()

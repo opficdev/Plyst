@@ -50,7 +50,7 @@ final class HomeSceneComposition {
         // 검색 화면은 같은 저장소와 서비스 인스턴스를 공유합니다. 클로저는 Composition이 아니라 서비스만 캡처합니다.
         let controller = HomeViewController(
             reactor: reactor,
-            makeHomeView: { HomeView(frame: .zero) },
+            makeHomeView: { HomeView(frame: .zero, send: $0) },
             makeSearchViewController: { [storage, clipboard, images] in
                 SearchViewController(
                     reactor: SearchReactor(
@@ -59,7 +59,7 @@ final class HomeSceneComposition {
                         clipboard: clipboard,
                         images: images
                     ),
-                    makeSearchView: { SearchView(frame: .zero) }
+                    makeSearchView: { SearchView(frame: .zero, send: $0) }
                 )
             }
         )

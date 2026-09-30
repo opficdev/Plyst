@@ -11,7 +11,7 @@ import UIKit
 
 @MainActor
 final class HomeViewController: ReactorViewController<HomeReactor> {
-    private lazy var homeView = makeHomeView()
+    private lazy var homeView = makeHomeView(makeSend())
     private var collectionView: UICollectionView { homeView.collectionView }
     private let thumbnailCache = NSCache<NSString, UIImage>()
     private lazy var timeline = HomeTimelineScheduler { [weak self] now in
@@ -24,7 +24,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     private var renderedFilter: HomeFilter?
     private var presentedFeedbackID: UUID?
     private var feedbackTask: Task<Void, Never>?
-    private let makeHomeView: @MainActor () -> any HomeViewable
+    private let makeHomeView: @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewable
     private let makeSearchViewController: @MainActor () -> UIViewController
 
     /// 상단 고정 항목이 있으면 section 0을 그 전용으로 두어 시간순 구간이 없어도 표시되게 한다.
@@ -32,7 +32,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     init(
         reactor: HomeReactor,
-        makeHomeView: @escaping @MainActor () -> any HomeViewable,
+        makeHomeView: @escaping @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewable,
         makeSearchViewController: @escaping @MainActor () -> UIViewController
     ) {
         self.makeHomeView = makeHomeView
@@ -46,16 +46,6 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     }
 
     override func loadView() {
-        homeView.setOnSave { [weak self] in
-            self?.reactor.action.onNext(.saveCurrentClipboard)
-        }
-        homeView.setOnSearch { [weak self] in
-            guard let self else { return }
-            navigationController?.pushViewController(makeSearchViewController(), animated: true)
-        }
-        homeView.setOnSelectFilter { [weak self] filter in
-            self?.reactor.action.onNext(.selectFilter(filter))
-        }
         homeView.collectionView.dataSource = self
         homeView.collectionView.delegate = self
         homeView.layout.delegate = self
@@ -178,6 +168,20 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
             send: { [weak self] action in self?.handle(action) }
         )
         requestPinnedRowThumbnails(row, state: state)
+    }
+
+    private func makeSend() -> @MainActor (HomeViewAction) -> Void {
+        { [weak self] action in
+            guard let self else { return }
+            switch action {
+            case .save:
+                reactor.action.onNext(.saveCurrentClipboard)
+            case .search:
+                navigationController?.pushViewController(makeSearchViewController(), animated: true)
+            case .selectFilter(let filter):
+                reactor.action.onNext(.selectFilter(filter))
+            }
+        }
     }
 
     private func handle(_ action: HomePinnedRowViewAction) {

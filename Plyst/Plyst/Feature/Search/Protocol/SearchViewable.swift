@@ -15,14 +15,6 @@ protocol SearchViewable: UIView {
     var imageCellType: any HomeImageCellable.Type { get }
     var sectionHeaderType: any HomeSectionHeaderViewable.Type { get }
 
-    func setOnChangeQuery(_ action: @escaping @MainActor (String) -> Void)
-    func setOnSubmit(_ action: @escaping @MainActor () -> Void)
-    func setOnCancel(_ action: @escaping @MainActor () -> Void)
-    func setOnSelectFilter(_ action: @escaping @MainActor (HomeFilter) -> Void)
-    func setOnSelectRecentTerm(_ action: @escaping @MainActor (String) -> Void)
-    func setOnRemoveRecentTerm(_ action: @escaping @MainActor (String) -> Void)
-    func setOnClearRecentTerms(_ action: @escaping @MainActor () -> Void)
-
     func focusSearchField()
     func setQuery(_ query: String)
     func setSelectedFilter(_ filter: HomeFilter)

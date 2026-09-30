@@ -23,14 +23,14 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
         let showsClear: Bool
     }
 
-    private lazy var searchView = makeSearchView()
+    private lazy var searchView = makeSearchView(makeSend())
     private var collectionView: UICollectionView { searchView.collectionView }
     private let thumbnailCache = NSCache<NSString, UIImage>()
     private lazy var timeline = HomeTimelineScheduler { [weak self] now in
         self?.reactor.action.onNext(.timeChanged(now))
     }
 
-    private let makeSearchView: @MainActor () -> any SearchViewable
+    private let makeSearchView: @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewable
 
     private var displays = [CardDisplay]()
     private var renderedContent: SearchContent?
@@ -44,7 +44,7 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
 
     init(
         reactor: SearchReactor,
-        makeSearchView: @escaping @MainActor () -> any SearchViewable
+        makeSearchView: @escaping @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewable
     ) {
         self.makeSearchView = makeSearchView
         super.init(reactor: reactor)
@@ -55,28 +55,29 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
         fatalError("init(coder:) is unavailable")
     }
 
+    private func makeSend() -> @MainActor (SearchViewAction) -> Void {
+        { [weak self] action in
+            guard let self else { return }
+            switch action {
+            case .changeQuery(let query):
+                reactor.action.onNext(.changeQuery(query))
+            case .submit:
+                reactor.action.onNext(.submitQuery)
+            case .cancel:
+                navigationController?.popViewController(animated: true)
+            case .selectFilter(let filter):
+                reactor.action.onNext(.selectFilter(filter))
+            case .selectRecentTerm(let term):
+                reactor.action.onNext(.selectRecentTerm(term))
+            case .removeRecentTerm(let term):
+                reactor.action.onNext(.removeRecentTerm(term))
+            case .clearRecentTerms:
+                reactor.action.onNext(.clearRecentTerms)
+            }
+        }
+    }
+
     override func loadView() {
-        searchView.setOnChangeQuery { [weak self] query in
-            self?.reactor.action.onNext(.changeQuery(query))
-        }
-        searchView.setOnSubmit { [weak self] in
-            self?.reactor.action.onNext(.submitQuery)
-        }
-        searchView.setOnCancel { [weak self] in
-            self?.navigationController?.popViewController(animated: true)
-        }
-        searchView.setOnSelectFilter { [weak self] filter in
-            self?.reactor.action.onNext(.selectFilter(filter))
-        }
-        searchView.setOnSelectRecentTerm { [weak self] term in
-            self?.reactor.action.onNext(.selectRecentTerm(term))
-        }
-        searchView.setOnRemoveRecentTerm { [weak self] term in
-            self?.reactor.action.onNext(.removeRecentTerm(term))
-        }
-        searchView.setOnClearRecentTerms { [weak self] in
-            self?.reactor.action.onNext(.clearRecentTerms)
-        }
         searchView.collectionView.dataSource = self
         searchView.collectionView.delegate = self
         searchView.layout.delegate = self

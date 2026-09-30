@@ -31,7 +31,7 @@ final class HomeView: UIView, HomeViewable {
     let layout = HomeGridLayout()
     private(set) lazy var collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
     private let titleHeader = HomeTitleHeaderView(frame: .zero)
-    private let filterBar = HomeFilterBarView()
+    private let filterBar: HomeFilterBarView
     private let headerContainer = UIView()
     private let contentArea = UILayoutGuide()
     private let emptyState = HomeEmptyStateView()
@@ -46,11 +46,18 @@ final class HomeView: UIView, HomeViewable {
     private var scrollViewportSize = CGSize.zero
     private var previousScrollY: CGFloat?
     private var isUpdatingScrollGeometry = false
-    private var onSave: (@MainActor () -> Void)?
-    private var onSearch: (@MainActor () -> Void)?
-    private var onSelectFilter: (@MainActor (HomeFilter) -> Void)?
+    private let send: @MainActor (HomeViewAction) -> Void
 
-    override init(frame: CGRect) {
+    init(
+        frame: CGRect,
+        send: @escaping @MainActor (HomeViewAction) -> Void
+    ) {
+        self.send = send
+        filterBar = HomeFilterBarView { action in
+            switch action {
+            case .select(let filter): send(.selectFilter(filter))
+            }
+        }
         super.init(frame: frame)
         configureAppearance()
         registerCells()
@@ -73,18 +80,6 @@ final class HomeView: UIView, HomeViewable {
     var imageCellType: any HomeImageCellable.Type { HomeImageCell.self }
     var sectionHeaderType: any HomeSectionHeaderViewable.Type { HomeSectionHeaderView.self }
     var pinnedRowType: any HomePinnedRowViewable.Type { HomePinnedRowView.self }
-
-    func setOnSave(_ action: @escaping @MainActor () -> Void) {
-        onSave = action
-    }
-
-    func setOnSearch(_ action: @escaping @MainActor () -> Void) {
-        onSearch = action
-    }
-
-    func setOnSelectFilter(_ action: @escaping @MainActor (HomeFilter) -> Void) {
-        onSelectFilter = action
-    }
 
     func reloadContent() {
         let wasUpdating = isUpdatingScrollGeometry
@@ -369,14 +364,11 @@ final class HomeView: UIView, HomeViewable {
     }
 
     private func bindActions() {
-        filterBar.setOnSelect { [weak self] filter in
-            self?.onSelectFilter?(filter)
-        }
         saveButton.addAction(UIAction { [weak self] _ in
-            self?.onSave?()
+            self?.send(.save)
         }, for: .touchUpInside)
         titleHeader.searchButton.addAction(UIAction { [weak self] _ in
-            self?.onSearch?()
+            self?.send(.search)
         }, for: .touchUpInside)
     }
 

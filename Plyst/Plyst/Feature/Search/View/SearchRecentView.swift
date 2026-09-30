@@ -16,12 +16,11 @@ final class SearchRecentView: UIView {
     private let chips = UIStackView()
     private let message = UILabel()
     private let hint = UILabel()
-    private var onSelect: (@MainActor (String) -> Void)?
-    private var onRemove: (@MainActor (String) -> Void)?
-    private var onClear: (@MainActor () -> Void)?
+    private let send: @MainActor (SearchRecentViewAction) -> Void
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    init(send: @escaping @MainActor (SearchRecentViewAction) -> Void) {
+        self.send = send
+        super.init(frame: .zero)
         configureAppearance()
         makeHierarchy()
         makeLayout()
@@ -31,18 +30,6 @@ final class SearchRecentView: UIView {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is unavailable")
-    }
-
-    func setOnSelect(_ action: @escaping @MainActor (String) -> Void) {
-        onSelect = action
-    }
-
-    func setOnRemove(_ action: @escaping @MainActor (String) -> Void) {
-        onRemove = action
-    }
-
-    func setOnClear(_ action: @escaping @MainActor () -> Void) {
-        onClear = action
     }
 
     /// terms가 있으면 칩을 표시하고, 없으면 message를 표시합니다. showsClear는 전체 삭제 버튼 표시 여부입니다.
@@ -55,10 +42,10 @@ final class SearchRecentView: UIView {
         for term in terms {
             let chip = SearchTermChipView(term: term)
             chip.onSelect = { [weak self] in
-                self?.onSelect?(term)
+                self?.send(.select(term))
             }
             chip.onRemove = { [weak self] in
-                self?.onRemove?(term)
+                self?.send(.remove(term))
             }
             chips.addArrangedSubview(chip)
         }
@@ -143,7 +130,7 @@ final class SearchRecentView: UIView {
 
     private func bindActions() {
         clearButton.addAction(UIAction { [weak self] _ in
-            self?.onClear?()
+            self?.send(.clear)
         }, for: .touchUpInside)
     }
 }

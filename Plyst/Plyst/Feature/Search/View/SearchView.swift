@@ -15,19 +15,29 @@ final class SearchView: UIView, SearchViewable {
     private let searchIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
     private let searchField = UITextField()
     private let cancelButton = UIButton(type: .system)
-    private let filterBar = HomeFilterBarView()
-    private let recentView = SearchRecentView()
+    private let filterBar: HomeFilterBarView
+    private let recentView: SearchRecentView
     private let emptyState = HomeEmptyStateView()
     private let toast = ToastView(textColor: UIColor(resource: .homeBottomText))
-    private var onChangeQuery: (@MainActor (String) -> Void)?
-    private var onSubmit: (@MainActor () -> Void)?
-    private var onCancel: (@MainActor () -> Void)?
-    private var onSelectFilter: (@MainActor (HomeFilter) -> Void)?
-    private var onSelectRecentTerm: (@MainActor (String) -> Void)?
-    private var onRemoveRecentTerm: (@MainActor (String) -> Void)?
-    private var onClearRecentTerms: (@MainActor () -> Void)?
+    private let send: @MainActor (SearchViewAction) -> Void
 
-    override init(frame: CGRect) {
+    init(
+        frame: CGRect,
+        send: @escaping @MainActor (SearchViewAction) -> Void
+    ) {
+        self.send = send
+        filterBar = HomeFilterBarView { action in
+            switch action {
+            case .select(let filter): send(.selectFilter(filter))
+            }
+        }
+        recentView = SearchRecentView { action in
+            switch action {
+            case .select(let term): send(.selectRecentTerm(term))
+            case .remove(let term): send(.removeRecentTerm(term))
+            case .clear: send(.clearRecentTerms)
+            }
+        }
         super.init(frame: frame)
         configureAppearance()
         registerCells()
@@ -50,34 +60,6 @@ final class SearchView: UIView, SearchViewable {
     var textCellType: any HomeTextCellable.Type { HomeTextCell.self }
     var imageCellType: any HomeImageCellable.Type { HomeImageCell.self }
     var sectionHeaderType: any HomeSectionHeaderViewable.Type { HomeSectionHeaderView.self }
-
-    func setOnChangeQuery(_ action: @escaping @MainActor (String) -> Void) {
-        onChangeQuery = action
-    }
-
-    func setOnSubmit(_ action: @escaping @MainActor () -> Void) {
-        onSubmit = action
-    }
-
-    func setOnCancel(_ action: @escaping @MainActor () -> Void) {
-        onCancel = action
-    }
-
-    func setOnSelectFilter(_ action: @escaping @MainActor (HomeFilter) -> Void) {
-        onSelectFilter = action
-    }
-
-    func setOnSelectRecentTerm(_ action: @escaping @MainActor (String) -> Void) {
-        onSelectRecentTerm = action
-    }
-
-    func setOnRemoveRecentTerm(_ action: @escaping @MainActor (String) -> Void) {
-        onRemoveRecentTerm = action
-    }
-
-    func setOnClearRecentTerms(_ action: @escaping @MainActor () -> Void) {
-        onClearRecentTerms = action
-    }
 
     func focusSearchField() {
         searchField.becomeFirstResponder()
@@ -259,29 +241,17 @@ final class SearchView: UIView, SearchViewable {
     }
 
     private func bindActions() {
-        filterBar.setOnSelect { [weak self] filter in
-            self?.onSelectFilter?(filter)
-        }
-        recentView.setOnSelect { [weak self] term in
-            self?.onSelectRecentTerm?(term)
-        }
-        recentView.setOnRemove { [weak self] term in
-            self?.onRemoveRecentTerm?(term)
-        }
-        recentView.setOnClear { [weak self] in
-            self?.onClearRecentTerms?()
-        }
         searchField.addAction(UIAction { [weak self] _ in
             guard let self else { return }
-            onChangeQuery?(searchField.text ?? "")
+            send(.changeQuery(searchField.text ?? ""))
         }, for: .editingChanged)
         searchField.addAction(UIAction { [weak self] _ in
             guard let self else { return }
-            onSubmit?()
+            send(.submit)
             searchField.resignFirstResponder()
         }, for: .editingDidEndOnExit)
         cancelButton.addAction(UIAction { [weak self] _ in
-            self?.onCancel?()
+            self?.send(.cancel)
         }, for: .touchUpInside)
     }
 

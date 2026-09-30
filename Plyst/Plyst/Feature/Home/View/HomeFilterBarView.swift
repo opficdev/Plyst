@@ -11,10 +11,11 @@ final class HomeFilterBarView: UIView {
     private let scrollView = UIScrollView()
     private let stack = UIStackView()
     private var buttons = [HomeFilter: UIButton]()
-    private var onSelect: (@MainActor (HomeFilter) -> Void)?
+    private let send: @MainActor (HomeFilterBarViewAction) -> Void
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    init(send: @escaping @MainActor (HomeFilterBarViewAction) -> Void) {
+        self.send = send
+        super.init(frame: .zero)
         configureAppearance()
         makeButtons()
         makeHierarchy()
@@ -25,10 +26,6 @@ final class HomeFilterBarView: UIView {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is unavailable")
-    }
-
-    func setOnSelect(_ action: @escaping @MainActor (HomeFilter) -> Void) {
-        onSelect = action
     }
 
     func setSelectedFilter(_ filter: HomeFilter) {
@@ -68,7 +65,7 @@ final class HomeFilterBarView: UIView {
         for filter in HomeFilter.allCases {
             let button = UIButton(type: .system)
             button.addAction(UIAction { [weak self] _ in
-                self?.onSelect?(filter)
+                self?.send(.select(filter))
             }, for: .touchUpInside)
             buttons[filter] = button
             stack.addArrangedSubview(button)
