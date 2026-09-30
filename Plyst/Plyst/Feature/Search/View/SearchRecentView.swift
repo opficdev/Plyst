@@ -7,23 +7,8 @@
 
 import UIKit
 
-@MainActor
-protocol SearchRecentViewDelegate: AnyObject {
-    func searchRecentView(
-        _ view: SearchRecentView,
-        didSelect term: String
-    )
-    func searchRecentView(
-        _ view: SearchRecentView,
-        didRemove term: String
-    )
-    func searchRecentViewDidRequestClear(_ view: SearchRecentView)
-}
-
 /// 검색어가 없을 때 보이는 최근 검색어 영역입니다.
 final class SearchRecentView: UIView {
-    weak var delegate: SearchRecentViewDelegate?
-
     private let title = UILabel()
     private let clearButton = UIButton(type: .system)
     private let rule = UIView()
@@ -31,6 +16,9 @@ final class SearchRecentView: UIView {
     private let chips = UIStackView()
     private let message = UILabel()
     private let hint = UILabel()
+    private var onSelect: (@MainActor (String) -> Void)?
+    private var onRemove: (@MainActor (String) -> Void)?
+    private var onClear: (@MainActor () -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -45,6 +33,18 @@ final class SearchRecentView: UIView {
         fatalError("init(coder:) is unavailable")
     }
 
+    func setOnSelect(_ action: @escaping @MainActor (String) -> Void) {
+        onSelect = action
+    }
+
+    func setOnRemove(_ action: @escaping @MainActor (String) -> Void) {
+        onRemove = action
+    }
+
+    func setOnClear(_ action: @escaping @MainActor () -> Void) {
+        onClear = action
+    }
+
     /// terms가 있으면 칩을 표시하고, 없으면 message를 표시합니다. showsClear는 전체 삭제 버튼 표시 여부입니다.
     func configure(
         terms: [String],
@@ -55,12 +55,10 @@ final class SearchRecentView: UIView {
         for term in terms {
             let chip = SearchTermChipView(term: term)
             chip.onSelect = { [weak self] in
-                guard let self else { return }
-                delegate?.searchRecentView(self, didSelect: term)
+                self?.onSelect?(term)
             }
             chip.onRemove = { [weak self] in
-                guard let self else { return }
-                delegate?.searchRecentView(self, didRemove: term)
+                self?.onRemove?(term)
             }
             chips.addArrangedSubview(chip)
         }
@@ -145,8 +143,7 @@ final class SearchRecentView: UIView {
 
     private func bindActions() {
         clearButton.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            delegate?.searchRecentViewDidRequestClear(self)
+            self?.onClear?()
         }, for: .touchUpInside)
     }
 }

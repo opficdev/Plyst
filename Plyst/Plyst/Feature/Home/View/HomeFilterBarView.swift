@@ -7,20 +7,11 @@
 
 import UIKit
 
-@MainActor
-protocol HomeFilterBarViewDelegate: AnyObject {
-    func homeFilterBar(
-        _ view: HomeFilterBarView,
-        didSelect filter: HomeFilter
-    )
-}
-
 final class HomeFilterBarView: UIView {
-    weak var delegate: HomeFilterBarViewDelegate?
-
     private let scrollView = UIScrollView()
     private let stack = UIStackView()
     private var buttons = [HomeFilter: UIButton]()
+    private var onSelect: (@MainActor (HomeFilter) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -34,6 +25,10 @@ final class HomeFilterBarView: UIView {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is unavailable")
+    }
+
+    func setOnSelect(_ action: @escaping @MainActor (HomeFilter) -> Void) {
+        onSelect = action
     }
 
     func setSelectedFilter(_ filter: HomeFilter) {
@@ -73,8 +68,7 @@ final class HomeFilterBarView: UIView {
         for filter in HomeFilter.allCases {
             let button = UIButton(type: .system)
             button.addAction(UIAction { [weak self] _ in
-                guard let self else { return }
-                delegate?.homeFilterBar(self, didSelect: filter)
+                self?.onSelect?(filter)
             }, for: .touchUpInside)
             buttons[filter] = button
             stack.addArrangedSubview(button)

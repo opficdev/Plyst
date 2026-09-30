@@ -361,7 +361,10 @@ final class HomeView: UIView {
     }
 
     private func bindActions() {
-        filterBar.delegate = self
+        filterBar.setOnSelect { [weak self] filter in
+            guard let self else { return }
+            delegate?.homeView(self, didSelectFilter: filter)
+        }
         saveButton.addAction(UIAction { [weak self] _ in
             guard let self else { return }
             delegate?.homeViewDidRequestSave(self)
@@ -372,13 +375,4 @@ final class HomeView: UIView {
         }, for: .touchUpInside)
     }
 
-}
-
-extension HomeView: HomeFilterBarViewDelegate {
-    func homeFilterBar(
-        _ view: HomeFilterBarView,
-        didSelect filter: HomeFilter
-    ) {
-        delegate?.homeView(self, didSelectFilter: filter)
-    }
 }

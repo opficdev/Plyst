@@ -245,8 +245,22 @@ final class SearchView: UIView {
     }
 
     private func bindActions() {
-        filterBar.delegate = self
-        recentView.delegate = self
+        filterBar.setOnSelect { [weak self] filter in
+            guard let self else { return }
+            delegate?.searchView(self, didSelectFilter: filter)
+        }
+        recentView.setOnSelect { [weak self] term in
+            guard let self else { return }
+            delegate?.searchView(self, didSelectRecentTerm: term)
+        }
+        recentView.setOnRemove { [weak self] term in
+            guard let self else { return }
+            delegate?.searchView(self, didRemoveRecentTerm: term)
+        }
+        recentView.setOnClear { [weak self] in
+            guard let self else { return }
+            delegate?.searchViewDidClearRecentTerms(self)
+        }
         searchField.addAction(UIAction { [weak self] _ in
             guard let self else { return }
             delegate?.searchView(self, didChangeQuery: searchField.text ?? "")
@@ -271,34 +285,5 @@ final class SearchView: UIView {
 
     private func updateBorder() {
         fieldContainer.layer.borderColor = UIColor(resource: .homeOutline).resolvedColor(with: traitCollection).cgColor
-    }
-}
-
-extension SearchView: HomeFilterBarViewDelegate {
-    func homeFilterBar(
-        _ view: HomeFilterBarView,
-        didSelect filter: HomeFilter
-    ) {
-        delegate?.searchView(self, didSelectFilter: filter)
-    }
-}
-
-extension SearchView: SearchRecentViewDelegate {
-    func searchRecentView(
-        _ view: SearchRecentView,
-        didSelect term: String
-    ) {
-        delegate?.searchView(self, didSelectRecentTerm: term)
-    }
-
-    func searchRecentView(
-        _ view: SearchRecentView,
-        didRemove term: String
-    ) {
-        delegate?.searchView(self, didRemoveRecentTerm: term)
-    }
-
-    func searchRecentViewDidRequestClear(_ view: SearchRecentView) {
-        delegate?.searchViewDidClearRecentTerms(self)
     }
 }
