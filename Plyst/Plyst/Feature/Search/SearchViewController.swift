@@ -23,7 +23,7 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
         let showsClear: Bool
     }
 
-    private lazy var searchView = SearchView(frame: .zero)
+    private lazy var searchView: any SearchViewable = SearchView(frame: .zero)
     private var collectionView: UICollectionView { searchView.collectionView }
     private let thumbnailCache = NSCache<NSString, UIImage>()
     private lazy var timeline = HomeTimelineScheduler { [weak self] now in
@@ -41,7 +41,27 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
     private var didFocusSearchField = false
 
     override func loadView() {
-        searchView.delegate = self
+        searchView.setOnChangeQuery { [weak self] query in
+            self?.reactor.action.onNext(.changeQuery(query))
+        }
+        searchView.setOnSubmit { [weak self] in
+            self?.reactor.action.onNext(.submitQuery)
+        }
+        searchView.setOnCancel { [weak self] in
+            self?.navigationController?.popViewController(animated: true)
+        }
+        searchView.setOnSelectFilter { [weak self] filter in
+            self?.reactor.action.onNext(.selectFilter(filter))
+        }
+        searchView.setOnSelectRecentTerm { [weak self] term in
+            self?.reactor.action.onNext(.selectRecentTerm(term))
+        }
+        searchView.setOnRemoveRecentTerm { [weak self] term in
+            self?.reactor.action.onNext(.removeRecentTerm(term))
+        }
+        searchView.setOnClearRecentTerms { [weak self] in
+            self?.reactor.action.onNext(.clearRecentTerms)
+        }
         searchView.collectionView.dataSource = self
         searchView.collectionView.delegate = self
         searchView.layout.delegate = self
@@ -265,9 +285,9 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
         switch clip.content {
         case .text:
             guard let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: HomeTextCell.reuseIdentifier,
+                withReuseIdentifier: searchView.textCellType.reuseIdentifier,
                 for: indexPath
-            ) as? any HomeTextCellable else { preconditionFailure("HomeTextCell registration mismatch") }
+            ) as? any HomeTextCellable else { preconditionFailure("\(searchView.textCellType) registration mismatch") }
             cell.configure(
                 with: clip,
                 now: reactor.currentState.now,
@@ -278,9 +298,9 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
             return cell
         case .image:
             guard let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: HomeImageCell.reuseIdentifier,
+                withReuseIdentifier: searchView.imageCellType.reuseIdentifier,
                 for: indexPath
-            ) as? any HomeImageCellable else { preconditionFailure("HomeImageCell registration mismatch") }
+            ) as? any HomeImageCellable else { preconditionFailure("\(searchView.imageCellType) registration mismatch") }
             let width = max(1, (collectionView.bounds.width - 42) / 2)
             if let key = thumbnailKey(for: clip, width: width) {
                 cell.configure(
@@ -303,9 +323,9 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
     ) -> UICollectionReusableView {
         guard let header = collectionView.dequeueReusableSupplementaryView(
             ofKind: kind,
-            withReuseIdentifier: HomeSectionHeaderView.reuseIdentifier,
+            withReuseIdentifier: searchView.sectionHeaderType.reuseIdentifier,
             for: indexPath
-        ) as? any HomeSectionHeaderViewable else { preconditionFailure("HomeSectionHeaderView registration mismatch") }
+        ) as? any HomeSectionHeaderViewable else { preconditionFailure("\(searchView.sectionHeaderType) registration mismatch") }
         header.configure(title: headerTitle())
         return header
     }
@@ -343,7 +363,7 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
         let display = displays[indexPath.item]
         switch display.result.clip.content {
         case .text:
-            return HomeTextCell.height(
+            return searchView.textCellType.height(
                 for: display.result.clip,
                 width: width,
                 name: display.name,
@@ -351,7 +371,7 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
                 showsCopy: true
             )
         case .image:
-            return HomeImageCell.height(
+            return searchView.imageCellType.height(
                 for: display.result.clip,
                 width: width,
                 name: display.name,
