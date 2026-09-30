@@ -81,6 +81,7 @@ final class SearchReactorTests: XCTestCase {
         XCTAssertEqual(reactor.currentState.searchHistoryPhase, .loaded)
 
         reactor.action.onNext(.changeQuery("  fresh "))
+        await waitForState(of: reactor) { $0.query == "  fresh " }
         reactor.action.onNext(.submitQuery)
         await waitForState(of: reactor) { $0.searchHistory.terms == ["fresh", "stored"] }
 
@@ -100,6 +101,7 @@ final class SearchReactorTests: XCTestCase {
         reactor.action.onNext(.viewDidLoad)
         await waitForState(of: reactor) { $0.searchHistoryPhase == .loaded }
         reactor.action.onNext(.changeQuery("   "))
+        await waitForState(of: reactor) { $0.query == "   " }
         reactor.action.onNext(.submitQuery)
         try await Task.sleep(for: .milliseconds(200))
 
@@ -214,6 +216,7 @@ final class SearchReactorTests: XCTestCase {
             """)
 
         reactor.action.onNext(.changeQuery("fresh"))
+        await waitForState(of: reactor) { $0.query == "fresh" }
         reactor.action.onNext(.submitQuery)
         await waitForState(of: reactor) { $0.feedback?.isSuccess == false }
 
