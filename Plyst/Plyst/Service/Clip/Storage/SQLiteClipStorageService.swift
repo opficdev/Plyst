@@ -9,7 +9,8 @@ import Foundation
 import OSLog
 import SQLiteData
 
-/// SQLiteData로 클립을 저장합니다. 모든 화면은 같은 인스턴스를 공유하여 변경을 관찰합니다.
+/// SQLiteData로 클립과 최근 검색어를 저장합니다. 모든 화면은 같은 인스턴스를 공유하여 클립 변경을 관찰합니다.
+/// 최근 검색어 연산은 ClipStorageEvent를 발행하지 않습니다.
 actor SQLiteClipStorageService: ClipStorageService {
 
     private static let logger = Logger(
@@ -226,5 +227,58 @@ actor SQLiteClipStorageService: ClipStorageService {
             return ClipStorageError.corruptedData
         }
         return fallback
+    }
+}
+
+// database와 access 등 private 멤버를 그대로 쓰기 위해 같은 파일에 둡니다. 연결과 마이그레이션은 이 actor가 계속 소유합니다.
+extension SQLiteClipStorageService: ClipSearchHistoryStorageService {
+    func fetchSearchHistory() throws -> ClipSearchHistory {
+        try access(fallback: .readFailed) {
+            try database.read { try Self.fetchSearchHistory(from: $0) }
+        }
+    }
+
+    func recordSearchTerm(_ query: ClipSearchQuery) throws -> ClipSearchHistory {
+        try replaceSearchHistory(operation: "recordSearchTerm") { $0.record(query) }
+    }
+
+    func removeSearchTerm(_ term: String) throws -> ClipSearchHistory {
+        try replaceSearchHistory(operation: "removeSearchTerm") { $0.remove(term) }
+    }
+
+    func removeAllSearchTerms() throws {
+        try access(fallback: .writeFailed) {
+            try database.write { try SQLiteClipSearchTermRecord.delete().execute($0) }
+        }
+    }
+
+    /// 읽기, 규칙 적용, 전체 교체를 하나의 트랜잭션으로 처리합니다. 결과가 같으면 쓰지 않습니다.
+    private func replaceSearchHistory(
+        operation: String,
+        change: (inout ClipSearchHistory) -> Void
+    ) throws -> ClipSearchHistory {
+        try access(operation, fallback: .writeFailed) {
+            try database.write { connection in
+                let current = try Self.fetchSearchHistory(from: connection)
+                var updated = current
+                change(&updated)
+                guard updated != current else { return current }
+                try SQLiteClipSearchTermRecord.delete().execute(connection)
+                for (position, term) in updated.terms.enumerated() {
+                    try SQLiteClipSearchTermRecord.insert {
+                        SQLiteClipSearchTermRecord(position: position, term: term)
+                    }.execute(connection)
+                }
+                return updated
+            }
+        }
+    }
+
+    private static func fetchSearchHistory(from connection: Database) throws -> ClipSearchHistory {
+        let records = try SQLiteClipSearchTermRecord.order(by: \.position).fetchAll(connection)
+        guard let history = ClipSearchHistory(terms: records.map(\.term)) else {
+            throw ClipStorageError.corruptedData
+        }
+        return history
     }
 }

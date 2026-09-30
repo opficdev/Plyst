@@ -81,10 +81,15 @@ extension SQLiteClipRecord {
         )
     }
 
+    /// clips.sqlite의 모든 스키마 마이그레이션을 이 마이그레이터 하나에 등록합니다.
+    /// 별도의 DatabaseMigrator를 만들면 hasBeenSuperseded 판정으로 기존 저장소가 corruptedData가 되므로, 새 마이그레이션은 이 목록 끝에 추가합니다.
     static func migrate(_ database: DatabaseQueue) throws {
         var migrator = DatabaseMigrator()
         migrator.registerMigration("CreateClips") { connection in
             try createTable(in: connection)
+        }
+        migrator.registerMigration("CreateClipSearchTerms") { connection in
+            try SQLiteClipSearchTermRecord.createTable(in: connection)
         }
         if try database.read({ try migrator.hasBeenSuperseded($0) }) {
             throw ClipStorageError.corruptedData
