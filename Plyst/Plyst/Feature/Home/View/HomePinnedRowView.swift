@@ -12,8 +12,7 @@ protocol HomePinnedRowViewDelegate: AnyObject {
     func homePinnedRowViewDidScroll(_ view: HomePinnedRowView)
 }
 
-final class HomePinnedRowView: UICollectionReusableView {
-    static let reuseIdentifier = String(describing: HomePinnedRowView.self)
+final class HomePinnedRowView: UICollectionReusableView, ReuseIdentifiable {
     private static let titleTopInset = CGFloat(20)
     private static let rowTopInset = CGFloat(14)
     private static let bottomInset = CGFloat(16)

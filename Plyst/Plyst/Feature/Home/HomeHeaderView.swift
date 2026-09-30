@@ -79,9 +79,7 @@ final class HomeTitleHeaderView: UIView {
     }
 }
 
-final class HomeSectionHeaderView: UICollectionReusableView {
-    static let reuseIdentifier = String(describing: HomeSectionHeaderView.self)
-
+final class HomeSectionHeaderView: UICollectionReusableView, ReuseIdentifiable {
     private let title = UILabel()
     private let rule = UIView()
 
