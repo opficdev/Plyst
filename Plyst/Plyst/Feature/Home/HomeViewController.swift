@@ -174,9 +174,17 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
             clips: pinnedClips,
             now: state.now,
             key: { [weak self] clip in self?.pinnedRowThumbnailKey(for: clip) },
-            thumbnail: { [weak self] key in self?.thumbnail(for: key, state: state) }
+            thumbnail: { [weak self] key in self?.thumbnail(for: key, state: state) },
+            send: { [weak self] action in self?.handle(action) }
         )
         requestPinnedRowThumbnails(row, state: state)
+    }
+
+    private func handle(_ action: HomePinnedRowViewAction) {
+        switch action {
+        case .didScroll(let row):
+            requestPinnedRowThumbnails(row, state: reactor.currentState)
+        }
     }
 
     /// 썸네일 보관 개수보다 고정 이미지가 많아도 요청과 제거가 반복되지 않도록 보이는 카드만 요청한다.
@@ -305,10 +313,6 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                 withReuseIdentifier: homeView.pinnedRowType.reuseIdentifier,
                 for: indexPath
             ) as? any HomePinnedRowViewable else { preconditionFailure("\(homeView.pinnedRowType) registration mismatch") }
-            row.setOnScroll { [weak self] row in
-                guard let self else { return }
-                requestPinnedRowThumbnails(row, state: reactor.currentState)
-            }
             configurePinnedRow(row, state: reactor.currentState)
             return row
 

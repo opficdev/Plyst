@@ -27,7 +27,7 @@ final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
     private let stack = UIStackView()
     private var items = [HomePinnedClipView]()
     private var clips = [Clip]()
-    private var onScroll: (@MainActor (any HomePinnedRowViewable) -> Void)?
+    private var send: (@MainActor (HomePinnedRowViewAction) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -41,16 +41,14 @@ final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
         fatalError("init(coder:) is unavailable")
     }
 
-    func setOnScroll(_ action: @escaping @MainActor (any HomePinnedRowViewable) -> Void) {
-        onScroll = action
-    }
-
     func configure(
         clips: [Clip],
         now: Date,
         key: (Clip) -> HomeThumbnailKey?,
-        thumbnail: (HomeThumbnailKey) -> UIImage?
+        thumbnail: (HomeThumbnailKey) -> UIImage?,
+        send: @escaping @MainActor (HomePinnedRowViewAction) -> Void
     ) {
+        self.send = send
         self.clips = clips
         while items.count < clips.count { items.append(makeItem()) }
         while clips.count < items.count { items.removeLast().removeFromSuperview() }
@@ -134,6 +132,6 @@ final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
 
 extension HomePinnedRowView: UIScrollViewDelegate {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        onScroll?(self)
+        send?(.didScroll(self))
     }
 }

@@ -12,13 +12,12 @@ protocol HomePinnedRowViewable: UICollectionReusableView, ReuseIdentifiable {
     static var height: CGFloat { get }
     static var thumbnailDimension: CGFloat { get }
 
-    func setOnScroll(_ action: @escaping @MainActor (any HomePinnedRowViewable) -> Void)
-
     func configure(
         clips: [Clip],
         now: Date,
         key: (Clip) -> HomeThumbnailKey?,
-        thumbnail: (HomeThumbnailKey) -> UIImage?
+        thumbnail: (HomeThumbnailKey) -> UIImage?,
+        send: @escaping @MainActor (HomePinnedRowViewAction) -> Void
     )
 
     func visibleClips() -> [Clip]
