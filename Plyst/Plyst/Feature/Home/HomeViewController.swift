@@ -11,7 +11,7 @@ import UIKit
 
 @MainActor
 final class HomeViewController: ReactorViewController<HomeReactor> {
-    private lazy var homeView = HomeView(frame: .zero)
+    private lazy var homeView = makeHomeView(makeSend())
     private var collectionView: UICollectionView { homeView.collectionView }
     private let thumbnailCache = NSCache<NSString, UIImage>()
     private lazy var timeline = HomeTimelineScheduler { [weak self] now in
@@ -24,6 +24,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     private var renderedFilter: HomeFilter?
     private var presentedFeedbackID: UUID?
     private var feedbackTask: Task<Void, Never>?
+    private let makeHomeView: @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewable
     private let makeSearchViewController: @MainActor () -> UIViewController
 
     /// 상단 고정 항목이 있으면 section 0을 그 전용으로 두어 시간순 구간이 없어도 표시되게 한다.
@@ -31,8 +32,10 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     init(
         reactor: HomeReactor,
+        makeHomeView: @escaping @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewable,
         makeSearchViewController: @escaping @MainActor () -> UIViewController
     ) {
+        self.makeHomeView = makeHomeView
         self.makeSearchViewController = makeSearchViewController
         super.init(reactor: reactor)
     }
@@ -43,7 +46,6 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     }
 
     override func loadView() {
-        homeView.delegate = self
         homeView.collectionView.dataSource = self
         homeView.collectionView.delegate = self
         homeView.layout.delegate = self
@@ -138,7 +140,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     private func updateVisibleThumbnails(state: HomeReactor.State) {
         for cell in collectionView.visibleCells {
-            guard let cell = cell as? HomeImageCell,
+            guard let cell = cell as? any HomeImageCellable,
                   let key = cell.representedKey,
                   let data = state.thumbnails[key] else { continue }
             let cacheKey = "\(key.fileID.uuidString)-\(key.maximumPixelDimension)" as NSString
@@ -149,27 +151,49 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
             }
         }
         for view in collectionView.visibleSupplementaryViews(ofKind: HomeGridLayout.pinnedRowKind) {
-            guard let row = view as? HomePinnedRowView else { continue }
+            guard let row = view as? any HomePinnedRowViewable else { continue }
             configurePinnedRow(row, state: state)
         }
     }
 
     private func configurePinnedRow(
-        _ row: HomePinnedRowView,
+        _ row: any HomePinnedRowViewable,
         state: HomeReactor.State
     ) {
         row.configure(
             clips: pinnedClips,
             now: state.now,
             key: { [weak self] clip in self?.pinnedRowThumbnailKey(for: clip) },
-            thumbnail: { [weak self] key in self?.thumbnail(for: key, state: state) }
+            thumbnail: { [weak self] key in self?.thumbnail(for: key, state: state) },
+            send: { [weak self] action in self?.handle(action) }
         )
         requestPinnedRowThumbnails(row, state: state)
     }
 
+    private func makeSend() -> @MainActor (HomeViewAction) -> Void {
+        { [weak self] action in
+            guard let self else { return }
+            switch action {
+            case .save:
+                reactor.action.onNext(.saveCurrentClipboard)
+            case .search:
+                navigationController?.pushViewController(makeSearchViewController(), animated: true)
+            case .selectFilter(let filter):
+                reactor.action.onNext(.selectFilter(filter))
+            }
+        }
+    }
+
+    private func handle(_ action: HomePinnedRowViewAction) {
+        switch action {
+        case .didScroll(let row):
+            requestPinnedRowThumbnails(row, state: reactor.currentState)
+        }
+    }
+
     /// 썸네일 보관 개수보다 고정 이미지가 많아도 요청과 제거가 반복되지 않도록 보이는 카드만 요청한다.
     private func requestPinnedRowThumbnails(
-        _ row: HomePinnedRowView,
+        _ row: any HomePinnedRowViewable,
         state: HomeReactor.State
     ) {
         for clip in row.visibleClips() {
@@ -180,7 +204,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     private func pinnedRowThumbnailKey(for clip: Clip) -> HomeThumbnailKey? {
         guard case .image(let image) = clip.content else { return nil }
-        let pixels = max(1, Int(ceil(HomePinnedClipCell.thumbnailDimension * traitCollection.displayScale)))
+        let pixels = max(1, Int(ceil(homeView.pinnedRowType.thumbnailDimension * traitCollection.displayScale)))
         return HomeThumbnailKey(
             clipID: clip.id,
             fileID: image.fileID,
@@ -210,29 +234,6 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
         guard case .image(let image) = clip.content else { return nil }
         let pixels = max(1, Int(ceil((width - 12) * traitCollection.displayScale)))
         return HomeThumbnailKey(clipID: clip.id, fileID: image.fileID, maximumPixelDimension: pixels)
-    }
-}
-
-extension HomeViewController: HomeViewDelegate {
-    func homeViewDidRequestSave(_ view: HomeView) {
-        reactor.action.onNext(.saveCurrentClipboard)
-    }
-
-    func homeViewDidRequestSearch(_ view: HomeView) {
-        navigationController?.pushViewController(makeSearchViewController(), animated: true)
-    }
-
-    func homeView(
-        _ view: HomeView,
-        didSelectFilter filter: HomeFilter
-    ) {
-        reactor.action.onNext(.selectFilter(filter))
-    }
-}
-
-extension HomeViewController: HomePinnedRowViewDelegate {
-    func homePinnedRowViewDidScroll(_ view: HomePinnedRowView) {
-        requestPinnedRowThumbnails(view, state: reactor.currentState)
     }
 }
 
@@ -273,23 +274,31 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         switch clip.content {
         case .text:
             guard let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: HomeTextCell.reuseIdentifier,
+                withReuseIdentifier: homeView.textCellType.reuseIdentifier,
                 for: indexPath
-            ) as? HomeTextCell else { preconditionFailure("HomeTextCell registration mismatch") }
-            cell.configure(with: clip, now: reactor.currentState.now)
+            ) as? any HomeTextCellable else { preconditionFailure("\(homeView.textCellType) registration mismatch") }
+            cell.configure(
+                with: clip,
+                now: reactor.currentState.now,
+                name: nil,
+                body: nil,
+                onCopy: nil
+            )
             return cell
         case .image:
             guard let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: HomeImageCell.reuseIdentifier,
+                withReuseIdentifier: homeView.imageCellType.reuseIdentifier,
                 for: indexPath
-            ) as? HomeImageCell else { preconditionFailure("HomeImageCell registration mismatch") }
+            ) as? any HomeImageCellable else { preconditionFailure("\(homeView.imageCellType) registration mismatch") }
             let width = max(1, (collectionView.bounds.width - 42) / 2)
             if let key = thumbnailKey(for: clip, width: width) {
                 cell.configure(
                     with: clip,
                     now: reactor.currentState.now,
                     key: key,
-                    thumbnail: thumbnail(for: key, state: reactor.currentState)
+                    thumbnail: thumbnail(for: key, state: reactor.currentState),
+                    name: nil,
+                    onCopy: nil
                 )
             }
             return cell
@@ -305,19 +314,18 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         case HomeGridLayout.pinnedRowKind:
             guard let row = collectionView.dequeueReusableSupplementaryView(
                 ofKind: kind,
-                withReuseIdentifier: HomePinnedRowView.reuseIdentifier,
+                withReuseIdentifier: homeView.pinnedRowType.reuseIdentifier,
                 for: indexPath
-            ) as? HomePinnedRowView else { preconditionFailure("HomePinnedRowView registration mismatch") }
-            row.delegate = self
+            ) as? any HomePinnedRowViewable else { preconditionFailure("\(homeView.pinnedRowType) registration mismatch") }
             configurePinnedRow(row, state: reactor.currentState)
             return row
 
         default:
             guard let header = collectionView.dequeueReusableSupplementaryView(
                 ofKind: kind,
-                withReuseIdentifier: HomeSectionHeaderView.reuseIdentifier,
+                withReuseIdentifier: homeView.sectionHeaderType.reuseIdentifier,
                 for: indexPath
-            ) as? HomeSectionHeaderView else { preconditionFailure("HomeSectionHeaderView registration mismatch") }
+            ) as? any HomeSectionHeaderViewable else { preconditionFailure("\(homeView.sectionHeaderType) registration mismatch") }
             header.configure(title: sections[indexPath.section - pinnedRowSectionCount].kind.title)
             return header
         }
@@ -328,7 +336,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         willDisplay cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
-        guard let cell = cell as? HomeImageCell,
+        guard let cell = cell as? any HomeImageCellable,
               let key = cell.representedKey,
               reactor.currentState.thumbnails[key] == nil else { return }
         reactor.action.onNext(.thumbnailRequested(key))
@@ -340,7 +348,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         forElementKind elementKind: String,
         at indexPath: IndexPath
     ) {
-        guard let row = view as? HomePinnedRowView else { return }
+        guard let row = view as? any HomePinnedRowViewable else { return }
         requestPinnedRowThumbnails(row, state: reactor.currentState)
     }
 
@@ -349,11 +357,11 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         didEndDisplaying cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
-        guard let cell = cell as? HomeImageCell,
+        guard let cell = cell as? any HomeImageCellable,
               let key = cell.representedKey else { return }
         Task { @MainActor [weak self] in
             guard let self,
-                  !self.collectionView.visibleCells.contains(where: { ($0 as? HomeImageCell)?.representedKey == key }) else { return }
+                  !self.collectionView.visibleCells.contains(where: { ($0 as? any HomeImageCellable)?.representedKey == key }) else { return }
             self.reactor.action.onNext(.thumbnailCancelled(key))
         }
     }
@@ -366,13 +374,24 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         let clip = clip(at: indexPath)
         switch clip.content {
         case .text:
-            return HomeTextCell.height(for: clip, width: width)
+            return homeView.textCellType.height(
+                for: clip,
+                width: width,
+                name: nil,
+                body: nil,
+                showsCopy: false
+            )
         case .image:
-            return HomeImageCell.height(for: clip, width: width)
+            return homeView.imageCellType.height(
+                for: clip,
+                width: width,
+                name: nil,
+                showsCopy: false
+            )
         }
     }
 
     func homeLayoutHeightForPinnedRow(_ layout: HomeGridLayout) -> CGFloat {
-        pinnedClips.isEmpty ? 0 : HomePinnedRowView.height
+        pinnedClips.isEmpty ? 0 : homeView.pinnedRowType.height
     }
 }

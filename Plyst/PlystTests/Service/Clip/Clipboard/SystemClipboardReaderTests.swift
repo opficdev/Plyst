@@ -15,14 +15,14 @@ import XCTest
 final class SystemClipboardReaderTests: XCTestCase {
     private var items = [[String: Any]]()
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         items = UIPasteboard.general.items
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         UIPasteboard.general.items = items
-        try super.tearDownWithError()
+        try await super.tearDown()
     }
 
     func testImageWinsOverTextAndURLInTheSameItemWithoutChangingBytes() async throws {

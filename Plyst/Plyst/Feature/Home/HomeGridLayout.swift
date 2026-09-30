@@ -18,6 +18,13 @@ protocol HomeGridLayoutDelegate: AnyObject {
     func homeLayoutHeightForPinnedRow(_ layout: HomeGridLayout) -> CGFloat
 }
 
+extension HomeGridLayoutDelegate {
+    /// 상단 고정 행이 없는 화면은 높이를 구현하지 않아도 되도록 0을 기본값으로 둡니다.
+    func homeLayoutHeightForPinnedRow(_ layout: HomeGridLayout) -> CGFloat {
+        0
+    }
+}
+
 final class HomeGridLayout: UICollectionViewLayout {
     static let headerKind = "HomeSectionHeader"
     static let pinnedRowKind = "HomePinnedRow"

@@ -39,7 +39,6 @@ final class HomeTimelineScheduler {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
-        timer?.invalidate()
     }
 
     func appear() {

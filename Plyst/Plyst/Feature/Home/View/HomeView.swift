@@ -8,17 +8,7 @@
 import UIKit
 
 @MainActor
-protocol HomeViewDelegate: AnyObject {
-    func homeViewDidRequestSave(_ view: HomeView)
-    func homeViewDidRequestSearch(_ view: HomeView)
-    func homeView(
-        _ view: HomeView,
-        didSelectFilter filter: HomeFilter
-    )
-}
-
-@MainActor
-final class HomeView: UIView {
+final class HomeView: UIView, HomeViewable {
     private static let saveIcon = UIGraphicsImageRenderer(size: CGSize(width: 18, height: 18)).image { _ in
         UIColor.black.setStroke()
         let board = UIBezierPath(roundedRect: CGRect(x: 3.5, y: 3, width: 11, height: 13), cornerRadius: 2.5)
@@ -38,12 +28,10 @@ final class HomeView: UIView {
         plus.stroke()
     }.withRenderingMode(.alwaysTemplate)
 
-    weak var delegate: HomeViewDelegate?
-
     let layout = HomeGridLayout()
     private(set) lazy var collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
     private let titleHeader = HomeTitleHeaderView(frame: .zero)
-    private let filterBar = HomeFilterBarView()
+    private let filterBar: HomeFilterBarView
     private let headerContainer = UIView()
     private let contentArea = UILayoutGuide()
     private let emptyState = HomeEmptyStateView()
@@ -58,8 +46,18 @@ final class HomeView: UIView {
     private var scrollViewportSize = CGSize.zero
     private var previousScrollY: CGFloat?
     private var isUpdatingScrollGeometry = false
+    private let send: @MainActor (HomeViewAction) -> Void
 
-    override init(frame: CGRect) {
+    init(
+        frame: CGRect,
+        send: @escaping @MainActor (HomeViewAction) -> Void
+    ) {
+        self.send = send
+        filterBar = HomeFilterBarView { action in
+            switch action {
+            case .select(let filter): send(.selectFilter(filter))
+            }
+        }
         super.init(frame: frame)
         configureAppearance()
         registerCells()
@@ -77,6 +75,11 @@ final class HomeView: UIView {
         super.layoutSubviews()
         updateScrollGeometry()
     }
+
+    var textCellType: any HomeTextCellable.Type { HomeTextCell.self }
+    var imageCellType: any HomeImageCellable.Type { HomeImageCell.self }
+    var sectionHeaderType: any HomeSectionHeaderViewable.Type { HomeSectionHeaderView.self }
+    var pinnedRowType: any HomePinnedRowViewable.Type { HomePinnedRowView.self }
 
     func reloadContent() {
         let wasUpdating = isUpdatingScrollGeometry
@@ -277,17 +280,17 @@ final class HomeView: UIView {
     }
 
     private func registerCells() {
-        collectionView.register(HomeTextCell.self, forCellWithReuseIdentifier: HomeTextCell.reuseIdentifier)
-        collectionView.register(HomeImageCell.self, forCellWithReuseIdentifier: HomeImageCell.reuseIdentifier)
+        collectionView.register(textCellType, forCellWithReuseIdentifier: textCellType.reuseIdentifier)
+        collectionView.register(imageCellType, forCellWithReuseIdentifier: imageCellType.reuseIdentifier)
         collectionView.register(
-            HomeSectionHeaderView.self,
+            sectionHeaderType,
             forSupplementaryViewOfKind: HomeGridLayout.headerKind,
-            withReuseIdentifier: HomeSectionHeaderView.reuseIdentifier
+            withReuseIdentifier: sectionHeaderType.reuseIdentifier
         )
         collectionView.register(
-            HomePinnedRowView.self,
+            pinnedRowType,
             forSupplementaryViewOfKind: HomeGridLayout.pinnedRowKind,
-            withReuseIdentifier: HomePinnedRowView.reuseIdentifier
+            withReuseIdentifier: pinnedRowType.reuseIdentifier
         )
     }
 
@@ -361,24 +364,12 @@ final class HomeView: UIView {
     }
 
     private func bindActions() {
-        filterBar.delegate = self
         saveButton.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            delegate?.homeViewDidRequestSave(self)
+            self?.send(.save)
         }, for: .touchUpInside)
         titleHeader.searchButton.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            delegate?.homeViewDidRequestSearch(self)
+            self?.send(.search)
         }, for: .touchUpInside)
     }
 
-}
-
-extension HomeView: HomeFilterBarViewDelegate {
-    func homeFilterBar(
-        _ view: HomeFilterBarView,
-        didSelect filter: HomeFilter
-    ) {
-        delegate?.homeView(self, didSelectFilter: filter)
-    }
 }

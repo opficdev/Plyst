@@ -1,5 +1,5 @@
 //
-//  HomePinnedClipCell.swift
+//  HomePinnedClipView.swift
 //  Plyst
 //
 //  Created by opfic on 9/30/26.
@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class HomePinnedClipCell: UIView {
+final class HomePinnedClipView: UIView {
     static let width = CGFloat(228)
     static let height = CGFloat(76)
     static let thumbnailDimension = CGFloat(56)
@@ -151,7 +151,7 @@ final class HomePinnedClipCell: UIView {
 
     private func bindTraitChanges() {
         updateBorder()
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: HomePinnedClipCell, _) in
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: HomePinnedClipView, _) in
             view.updateBorder()
         }
     }

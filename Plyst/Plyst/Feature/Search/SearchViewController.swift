@@ -23,12 +23,14 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
         let showsClear: Bool
     }
 
-    private lazy var searchView = SearchView(frame: .zero)
+    private lazy var searchView = makeSearchView(makeSend())
     private var collectionView: UICollectionView { searchView.collectionView }
     private let thumbnailCache = NSCache<NSString, UIImage>()
     private lazy var timeline = HomeTimelineScheduler { [weak self] now in
         self?.reactor.action.onNext(.timeChanged(now))
     }
+
+    private let makeSearchView: @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewable
 
     private var displays = [CardDisplay]()
     private var renderedContent: SearchContent?
@@ -40,8 +42,42 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
     private var feedbackTask: Task<Void, Never>?
     private var didFocusSearchField = false
 
+    init(
+        reactor: SearchReactor,
+        makeSearchView: @escaping @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewable
+    ) {
+        self.makeSearchView = makeSearchView
+        super.init(reactor: reactor)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is unavailable")
+    }
+
+    private func makeSend() -> @MainActor (SearchViewAction) -> Void {
+        { [weak self] action in
+            guard let self else { return }
+            switch action {
+            case .changeQuery(let query):
+                reactor.action.onNext(.changeQuery(query))
+            case .submit:
+                reactor.action.onNext(.submitQuery)
+            case .cancel:
+                navigationController?.popViewController(animated: true)
+            case .selectFilter(let filter):
+                reactor.action.onNext(.selectFilter(filter))
+            case .selectRecentTerm(let term):
+                reactor.action.onNext(.selectRecentTerm(term))
+            case .removeRecentTerm(let term):
+                reactor.action.onNext(.removeRecentTerm(term))
+            case .clearRecentTerms:
+                reactor.action.onNext(.clearRecentTerms)
+            }
+        }
+    }
+
     override func loadView() {
-        searchView.delegate = self
         searchView.collectionView.dataSource = self
         searchView.collectionView.delegate = self
         searchView.layout.delegate = self
@@ -201,7 +237,7 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
 
     private func updateVisibleThumbnails(state: SearchReactor.State) {
         for cell in collectionView.visibleCells {
-            guard let cell = cell as? HomeImageCell,
+            guard let cell = cell as? any HomeImageCellable,
                   let key = cell.representedKey,
                   let image = thumbnail(for: key, state: state) else { continue }
             cell.setThumbnail(image)
@@ -265,9 +301,9 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
         switch clip.content {
         case .text:
             guard let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: HomeTextCell.reuseIdentifier,
+                withReuseIdentifier: searchView.textCellType.reuseIdentifier,
                 for: indexPath
-            ) as? HomeTextCell else { preconditionFailure("HomeTextCell registration mismatch") }
+            ) as? any HomeTextCellable else { preconditionFailure("\(searchView.textCellType) registration mismatch") }
             cell.configure(
                 with: clip,
                 now: reactor.currentState.now,
@@ -278,9 +314,9 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
             return cell
         case .image:
             guard let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: HomeImageCell.reuseIdentifier,
+                withReuseIdentifier: searchView.imageCellType.reuseIdentifier,
                 for: indexPath
-            ) as? HomeImageCell else { preconditionFailure("HomeImageCell registration mismatch") }
+            ) as? any HomeImageCellable else { preconditionFailure("\(searchView.imageCellType) registration mismatch") }
             let width = max(1, (collectionView.bounds.width - 42) / 2)
             if let key = thumbnailKey(for: clip, width: width) {
                 cell.configure(
@@ -303,9 +339,9 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
     ) -> UICollectionReusableView {
         guard let header = collectionView.dequeueReusableSupplementaryView(
             ofKind: kind,
-            withReuseIdentifier: HomeSectionHeaderView.reuseIdentifier,
+            withReuseIdentifier: searchView.sectionHeaderType.reuseIdentifier,
             for: indexPath
-        ) as? HomeSectionHeaderView else { preconditionFailure("HomeSectionHeaderView registration mismatch") }
+        ) as? any HomeSectionHeaderViewable else { preconditionFailure("\(searchView.sectionHeaderType) registration mismatch") }
         header.configure(title: headerTitle())
         return header
     }
@@ -315,7 +351,7 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
         willDisplay cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
-        guard let cell = cell as? HomeImageCell,
+        guard let cell = cell as? any HomeImageCellable,
               let key = cell.representedKey,
               reactor.currentState.thumbnails[key] == nil else { return }
         reactor.action.onNext(.thumbnailRequested(key))
@@ -326,11 +362,11 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
         didEndDisplaying cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
-        guard let cell = cell as? HomeImageCell,
+        guard let cell = cell as? any HomeImageCellable,
               let key = cell.representedKey else { return }
         Task { @MainActor [weak self] in
             guard let self,
-                  !self.collectionView.visibleCells.contains(where: { ($0 as? HomeImageCell)?.representedKey == key }) else { return }
+                  !self.collectionView.visibleCells.contains(where: { ($0 as? any HomeImageCellable)?.representedKey == key }) else { return }
             self.reactor.action.onNext(.thumbnailCancelled(key))
         }
     }
@@ -343,7 +379,7 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
         let display = displays[indexPath.item]
         switch display.result.clip.content {
         case .text:
-            return HomeTextCell.height(
+            return searchView.textCellType.height(
                 for: display.result.clip,
                 width: width,
                 name: display.name,
@@ -351,16 +387,12 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
                 showsCopy: true
             )
         case .image:
-            return HomeImageCell.height(
+            return searchView.imageCellType.height(
                 for: display.result.clip,
                 width: width,
                 name: display.name,
                 showsCopy: true
             )
         }
-    }
-
-    func homeLayoutHeightForPinnedRow(_ layout: HomeGridLayout) -> CGFloat {
-        0
     }
 }

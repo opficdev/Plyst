@@ -7,23 +7,8 @@
 
 import UIKit
 
-@MainActor
-protocol SearchRecentViewDelegate: AnyObject {
-    func searchRecentView(
-        _ view: SearchRecentView,
-        didSelect term: String
-    )
-    func searchRecentView(
-        _ view: SearchRecentView,
-        didRemove term: String
-    )
-    func searchRecentViewDidRequestClear(_ view: SearchRecentView)
-}
-
 /// 검색어가 없을 때 보이는 최근 검색어 영역입니다.
 final class SearchRecentView: UIView {
-    weak var delegate: SearchRecentViewDelegate?
-
     private let title = UILabel()
     private let clearButton = UIButton(type: .system)
     private let rule = UIView()
@@ -31,9 +16,11 @@ final class SearchRecentView: UIView {
     private let chips = UIStackView()
     private let message = UILabel()
     private let hint = UILabel()
+    private let send: @MainActor (SearchRecentViewAction) -> Void
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    init(send: @escaping @MainActor (SearchRecentViewAction) -> Void) {
+        self.send = send
+        super.init(frame: .zero)
         configureAppearance()
         makeHierarchy()
         makeLayout()
@@ -55,12 +42,10 @@ final class SearchRecentView: UIView {
         for term in terms {
             let chip = SearchTermChipView(term: term)
             chip.onSelect = { [weak self] in
-                guard let self else { return }
-                delegate?.searchRecentView(self, didSelect: term)
+                self?.send(.select(term))
             }
             chip.onRemove = { [weak self] in
-                guard let self else { return }
-                delegate?.searchRecentView(self, didRemove: term)
+                self?.send(.remove(term))
             }
             chips.addArrangedSubview(chip)
         }
@@ -145,8 +130,7 @@ final class SearchRecentView: UIView {
 
     private func bindActions() {
         clearButton.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            delegate?.searchRecentViewDidRequestClear(self)
+            self?.send(.clear)
         }, for: .touchUpInside)
     }
 }

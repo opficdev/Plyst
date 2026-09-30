@@ -9,6 +9,7 @@ import UIKit
 
 /// 검색 결과 카드에 표시할 강조 문자열을 만듭니다. 일치한 부분에는 배경색과 굵은 글꼴을 적용합니다.
 /// 높이 계산과 표시에 같은 문자열을 쓸 수 있도록 모든 구간에 글꼴을 지정합니다.
+@MainActor
 enum SearchCardText {
     private static let ellipsis = "…"
 

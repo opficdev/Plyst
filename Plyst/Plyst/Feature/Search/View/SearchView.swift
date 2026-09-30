@@ -8,44 +8,36 @@
 import UIKit
 
 @MainActor
-protocol SearchViewDelegate: AnyObject {
-    func searchView(
-        _ view: SearchView,
-        didChangeQuery query: String
-    )
-    func searchViewDidSubmit(_ view: SearchView)
-    func searchViewDidCancel(_ view: SearchView)
-    func searchView(
-        _ view: SearchView,
-        didSelectFilter filter: HomeFilter
-    )
-    func searchView(
-        _ view: SearchView,
-        didSelectRecentTerm term: String
-    )
-    func searchView(
-        _ view: SearchView,
-        didRemoveRecentTerm term: String
-    )
-    func searchViewDidClearRecentTerms(_ view: SearchView)
-}
-
-@MainActor
-final class SearchView: UIView {
-    weak var delegate: SearchViewDelegate?
-
+final class SearchView: UIView, SearchViewable {
     let layout = HomeGridLayout()
     private(set) lazy var collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
     private let fieldContainer = UIView()
     private let searchIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
     private let searchField = UITextField()
     private let cancelButton = UIButton(type: .system)
-    private let filterBar = HomeFilterBarView()
-    private let recentView = SearchRecentView()
+    private let filterBar: HomeFilterBarView
+    private let recentView: SearchRecentView
     private let emptyState = HomeEmptyStateView()
     private let toast = ToastView(textColor: UIColor(resource: .homeBottomText))
+    private let send: @MainActor (SearchViewAction) -> Void
 
-    override init(frame: CGRect) {
+    init(
+        frame: CGRect,
+        send: @escaping @MainActor (SearchViewAction) -> Void
+    ) {
+        self.send = send
+        filterBar = HomeFilterBarView { action in
+            switch action {
+            case .select(let filter): send(.selectFilter(filter))
+            }
+        }
+        recentView = SearchRecentView { action in
+            switch action {
+            case .select(let term): send(.selectRecentTerm(term))
+            case .remove(let term): send(.removeRecentTerm(term))
+            case .clear: send(.clearRecentTerms)
+            }
+        }
         super.init(frame: frame)
         configureAppearance()
         registerCells()
@@ -64,6 +56,10 @@ final class SearchView: UIView {
         super.didMoveToWindow()
         updateBorder()
     }
+
+    var textCellType: any HomeTextCellable.Type { HomeTextCell.self }
+    var imageCellType: any HomeImageCellable.Type { HomeImageCell.self }
+    var sectionHeaderType: any HomeSectionHeaderViewable.Type { HomeSectionHeaderView.self }
 
     func focusSearchField() {
         searchField.becomeFirstResponder()
@@ -171,12 +167,12 @@ final class SearchView: UIView {
     }
 
     private func registerCells() {
-        collectionView.register(HomeTextCell.self, forCellWithReuseIdentifier: HomeTextCell.reuseIdentifier)
-        collectionView.register(HomeImageCell.self, forCellWithReuseIdentifier: HomeImageCell.reuseIdentifier)
+        collectionView.register(textCellType, forCellWithReuseIdentifier: textCellType.reuseIdentifier)
+        collectionView.register(imageCellType, forCellWithReuseIdentifier: imageCellType.reuseIdentifier)
         collectionView.register(
-            HomeSectionHeaderView.self,
+            sectionHeaderType,
             forSupplementaryViewOfKind: HomeGridLayout.headerKind,
-            withReuseIdentifier: HomeSectionHeaderView.reuseIdentifier
+            withReuseIdentifier: sectionHeaderType.reuseIdentifier
         )
     }
 
@@ -245,20 +241,17 @@ final class SearchView: UIView {
     }
 
     private func bindActions() {
-        filterBar.delegate = self
-        recentView.delegate = self
         searchField.addAction(UIAction { [weak self] _ in
             guard let self else { return }
-            delegate?.searchView(self, didChangeQuery: searchField.text ?? "")
+            send(.changeQuery(searchField.text ?? ""))
         }, for: .editingChanged)
         searchField.addAction(UIAction { [weak self] _ in
             guard let self else { return }
-            delegate?.searchViewDidSubmit(self)
+            send(.submit)
             searchField.resignFirstResponder()
         }, for: .editingDidEndOnExit)
         cancelButton.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            delegate?.searchViewDidCancel(self)
+            self?.send(.cancel)
         }, for: .touchUpInside)
     }
 
@@ -271,34 +264,5 @@ final class SearchView: UIView {
 
     private func updateBorder() {
         fieldContainer.layer.borderColor = UIColor(resource: .homeOutline).resolvedColor(with: traitCollection).cgColor
-    }
-}
-
-extension SearchView: HomeFilterBarViewDelegate {
-    func homeFilterBar(
-        _ view: HomeFilterBarView,
-        didSelect filter: HomeFilter
-    ) {
-        delegate?.searchView(self, didSelectFilter: filter)
-    }
-}
-
-extension SearchView: SearchRecentViewDelegate {
-    func searchRecentView(
-        _ view: SearchRecentView,
-        didSelect term: String
-    ) {
-        delegate?.searchView(self, didSelectRecentTerm: term)
-    }
-
-    func searchRecentView(
-        _ view: SearchRecentView,
-        didRemove term: String
-    ) {
-        delegate?.searchView(self, didRemoveRecentTerm: term)
-    }
-
-    func searchRecentViewDidRequestClear(_ view: SearchRecentView) {
-        delegate?.searchViewDidClearRecentTerms(self)
     }
 }
