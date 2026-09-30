@@ -20,7 +20,7 @@ final class HomePinnedRowView: UICollectionReusableView {
     private static let titleFont = UIFont.monospacedSystemFont(ofSize: 11, weight: .semibold)
 
     static var height: CGFloat {
-        titleTopInset + ceil(titleFont.lineHeight) + rowTopInset + HomePinnedClipCell.height + bottomInset
+        titleTopInset + ceil(titleFont.lineHeight) + rowTopInset + HomePinnedClipView.height + bottomInset
     }
 
     weak var delegate: HomePinnedRowViewDelegate?
@@ -29,7 +29,7 @@ final class HomePinnedRowView: UICollectionReusableView {
     private let rule = UIView()
     private let scrollView = UIScrollView()
     private let stack = UIStackView()
-    private var cells = [HomePinnedClipCell]()
+    private var items = [HomePinnedClipView]()
     private var clips = [Clip]()
 
     override init(frame: CGRect) {
@@ -51,12 +51,12 @@ final class HomePinnedRowView: UICollectionReusableView {
         thumbnail: (HomeThumbnailKey) -> UIImage?
     ) {
         self.clips = clips
-        while cells.count < clips.count { cells.append(makeCell()) }
-        while clips.count < cells.count { cells.removeLast().removeFromSuperview() }
+        while items.count < clips.count { items.append(makeItem()) }
+        while clips.count < items.count { items.removeLast().removeFromSuperview() }
 
         for (index, clip) in clips.enumerated() {
             let clipKey = key(clip)
-            cells[index].configure(
+            items[index].configure(
                 clip: clip,
                 now: now,
                 key: clipKey,
@@ -69,17 +69,17 @@ final class HomePinnedRowView: UICollectionReusableView {
     func visibleClips() -> [Clip] {
         layoutIfNeeded()
         let visible = scrollView.convert(scrollView.bounds, to: stack)
-        return zip(clips, cells)
+        return zip(clips, items)
             .filter { visible.intersects($0.1.frame) }
             .map(\.0)
     }
 
-    private func makeCell() -> HomePinnedClipCell {
-        let cell = HomePinnedClipCell()
-        cell.translatesAutoresizingMaskIntoConstraints = false
-        cell.widthAnchor.constraint(equalToConstant: HomePinnedClipCell.width).isActive = true
-        stack.addArrangedSubview(cell)
-        return cell
+    private func makeItem() -> HomePinnedClipView {
+        let item = HomePinnedClipView()
+        item.translatesAutoresizingMaskIntoConstraints = false
+        item.widthAnchor.constraint(equalToConstant: HomePinnedClipView.width).isActive = true
+        stack.addArrangedSubview(item)
+        return item
     }
 
     private func configureAppearance() {
@@ -121,7 +121,7 @@ final class HomePinnedRowView: UICollectionReusableView {
             scrollView.topAnchor.constraint(equalTo: title.bottomAnchor, constant: Self.rowTopInset),
             scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            scrollView.heightAnchor.constraint(equalToConstant: HomePinnedClipCell.height),
+            scrollView.heightAnchor.constraint(equalToConstant: HomePinnedClipView.height),
             stack.topAnchor.constraint(equalTo: scrollView.topAnchor),
             stack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             stack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 20),

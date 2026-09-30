@@ -180,7 +180,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     private func pinnedRowThumbnailKey(for clip: Clip) -> HomeThumbnailKey? {
         guard case .image(let image) = clip.content else { return nil }
-        let pixels = max(1, Int(ceil(HomePinnedClipCell.thumbnailDimension * traitCollection.displayScale)))
+        let pixels = max(1, Int(ceil(HomePinnedClipView.thumbnailDimension * traitCollection.displayScale)))
         return HomeThumbnailKey(
             clipID: clip.id,
             fileID: image.fileID,
