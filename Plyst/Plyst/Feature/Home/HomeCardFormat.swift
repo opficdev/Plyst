@@ -22,6 +22,21 @@ enum HomeCardFormat {
         return DateFormatter.localizedString(from: date, dateStyle: .medium, timeStyle: .short)
     }
 
+    /// 강조 서식이 들어간 문자열의 높이입니다. 문자열의 모든 구간에 글꼴이 지정돼 있어야 정확합니다.
+    static func height(
+        for text: NSAttributedString,
+        font: UIFont,
+        width: CGFloat,
+        lines: Int
+    ) -> CGFloat {
+        let bounds = text.boundingRect(
+            with: CGSize(width: max(1, width), height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        return min(ceil(font.lineHeight * CGFloat(lines)), max(ceil(font.lineHeight), ceil(bounds.height)))
+    }
+
     static func height(
         for text: String,
         font: UIFont,
