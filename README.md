@@ -80,7 +80,7 @@
 
 - Xcode 프로젝트와 Shared Scheme을 Git에서 추적
 - Swift Package 의존성은 프로젝트에서 선언하고 `Package.resolved`에서 해석된 버전 고정
-- 테스트 코드 빌드에 필요한 `StructuredQueriesCore`와 `GRDB`를 사용하는 타깃에 명시적으로 연결
+- 테스트 코드 빌드에 필요한 `StructuredQueriesSQLite`와 `GRDB`를 사용하는 타깃에 명시적으로 연결(`StructuredQueriesCore`를 별도로 연결하면 테스트 호스트에서 모듈이 중복 링크되어 앱이 종료됨)
 - 로컬에서는 Xcode의 `Trust & Enable`로 외부 패키지의 Swift Macro 승인
 - CI에서는 `XCODEBUILD_FLAGS=-skipMacroValidation`을 전달해 해당 빌드의 모든 Swift Macro 신뢰 검증 생략
 - SwiftLint 버전은 `.mise.toml`에서 고정하고 로컬과 CI에서 같은 버전 사용
