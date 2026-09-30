@@ -7,11 +7,6 @@
 
 import UIKit
 
-@MainActor
-protocol HomePinnedRowViewDelegate: AnyObject {
-    func homePinnedRowViewDidScroll(_ view: HomePinnedRowView)
-}
-
 final class HomePinnedRowView: UICollectionReusableView, ReuseIdentifiable {
     private static let titleTopInset = CGFloat(20)
     private static let rowTopInset = CGFloat(14)
@@ -22,14 +17,13 @@ final class HomePinnedRowView: UICollectionReusableView, ReuseIdentifiable {
         titleTopInset + ceil(titleFont.lineHeight) + rowTopInset + HomePinnedClipView.height + bottomInset
     }
 
-    weak var delegate: HomePinnedRowViewDelegate?
-
     private let title = UILabel()
     private let rule = UIView()
     private let scrollView = UIScrollView()
     private let stack = UIStackView()
     private var items = [HomePinnedClipView]()
     private var clips = [Clip]()
+    private var onScroll: (@MainActor (HomePinnedRowView) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -41,6 +35,10 @@ final class HomePinnedRowView: UICollectionReusableView, ReuseIdentifiable {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is unavailable")
+    }
+
+    func setOnScroll(_ action: @escaping @MainActor (HomePinnedRowView) -> Void) {
+        onScroll = action
     }
 
     func configure(
@@ -132,6 +130,6 @@ final class HomePinnedRowView: UICollectionReusableView, ReuseIdentifiable {
 
 extension HomePinnedRowView: UIScrollViewDelegate {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        delegate?.homePinnedRowViewDidScroll(self)
+        onScroll?(self)
     }
 }

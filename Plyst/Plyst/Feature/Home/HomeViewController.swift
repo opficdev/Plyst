@@ -230,12 +230,6 @@ extension HomeViewController: HomeViewDelegate {
     }
 }
 
-extension HomeViewController: HomePinnedRowViewDelegate {
-    func homePinnedRowViewDidScroll(_ view: HomePinnedRowView) {
-        requestPinnedRowThumbnails(view, state: reactor.currentState)
-    }
-}
-
 extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelegate, HomeGridLayoutDelegate {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         homeView.updateScrollPosition(scrollView.contentOffset.y)
@@ -308,7 +302,10 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                 withReuseIdentifier: HomePinnedRowView.reuseIdentifier,
                 for: indexPath
             ) as? HomePinnedRowView else { preconditionFailure("HomePinnedRowView registration mismatch") }
-            row.delegate = self
+            row.setOnScroll { [weak self] row in
+                guard let self else { return }
+                requestPinnedRowThumbnails(row, state: reactor.currentState)
+            }
             configurePinnedRow(row, state: reactor.currentState)
             return row
 
