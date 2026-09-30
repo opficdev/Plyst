@@ -201,7 +201,7 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
 
     private func updateVisibleThumbnails(state: SearchReactor.State) {
         for cell in collectionView.visibleCells {
-            guard let cell = cell as? any HomeImageCellViewable,
+            guard let cell = cell as? any HomeImageCellable,
                   let key = cell.representedKey,
                   let image = thumbnail(for: key, state: state) else { continue }
             cell.setThumbnail(image)
@@ -267,7 +267,7 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
             guard let cell = collectionView.dequeueReusableCell(
                 withReuseIdentifier: HomeTextCell.reuseIdentifier,
                 for: indexPath
-            ) as? any HomeTextCellViewable else { preconditionFailure("HomeTextCell registration mismatch") }
+            ) as? any HomeTextCellable else { preconditionFailure("HomeTextCell registration mismatch") }
             cell.configure(
                 with: clip,
                 now: reactor.currentState.now,
@@ -280,7 +280,7 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
             guard let cell = collectionView.dequeueReusableCell(
                 withReuseIdentifier: HomeImageCell.reuseIdentifier,
                 for: indexPath
-            ) as? any HomeImageCellViewable else { preconditionFailure("HomeImageCell registration mismatch") }
+            ) as? any HomeImageCellable else { preconditionFailure("HomeImageCell registration mismatch") }
             let width = max(1, (collectionView.bounds.width - 42) / 2)
             if let key = thumbnailKey(for: clip, width: width) {
                 cell.configure(
@@ -315,7 +315,7 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
         willDisplay cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
-        guard let cell = cell as? any HomeImageCellViewable,
+        guard let cell = cell as? any HomeImageCellable,
               let key = cell.representedKey,
               reactor.currentState.thumbnails[key] == nil else { return }
         reactor.action.onNext(.thumbnailRequested(key))
@@ -326,11 +326,11 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
         didEndDisplaying cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
-        guard let cell = cell as? any HomeImageCellViewable,
+        guard let cell = cell as? any HomeImageCellable,
               let key = cell.representedKey else { return }
         Task { @MainActor [weak self] in
             guard let self,
-                  !self.collectionView.visibleCells.contains(where: { ($0 as? any HomeImageCellViewable)?.representedKey == key }) else { return }
+                  !self.collectionView.visibleCells.contains(where: { ($0 as? any HomeImageCellable)?.representedKey == key }) else { return }
             self.reactor.action.onNext(.thumbnailCancelled(key))
         }
     }

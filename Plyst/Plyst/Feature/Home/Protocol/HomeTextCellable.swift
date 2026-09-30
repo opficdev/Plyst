@@ -1,5 +1,5 @@
 //
-//  HomeTextCellViewable.swift
+//  HomeTextCellable.swift
 //  Plyst
 //
 //  Created by opfic on 10/1/26.
@@ -8,7 +8,7 @@
 import UIKit
 
 @MainActor
-protocol HomeTextCellViewable: UICollectionViewCell, ReuseIdentifiable {
+protocol HomeTextCellable: UICollectionViewCell, ReuseIdentifiable {
     func configure(
         with clip: Clip,
         now: Date,
