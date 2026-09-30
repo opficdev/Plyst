@@ -125,12 +125,12 @@ final class HomeView: UIView {
         collectionView.setContentOffset(CGPoint(x: 0, y: -collectionView.contentInset.top), animated: true)
     }
 
-    /// 드래그나 감속이 끝났을 때 safe area 아래로 보이는 헤더 높이의 절반이 경계선을 넘었는지로 완전히 가리거나 완전히 보이게 스냅한다.
+    /// 드래그나 감속이 끝났을 때 헤더뷰의 가장 밑이 safe area 경계선을 넘었는지로 완전히 가리거나 완전히 보이게 스냅한다.
     func snapHeader() {
         guard 0 < headerHeight else { return }
         let top = -collectionView.contentInset.top
         let scrollY = boundedScrollY(collectionView.contentOffset.y)
-        let hides = (headerHeight - safeAreaInsets.top) / 2 < hiddenHeaderHeight
+        let hides = headerHeight - safeAreaInsets.top < hiddenHeaderHeight
         // 목록이 헤더 높이만큼 스크롤되지 않았으면 헤더와 함께 목록도 헤더만큼 이동하거나 맨 위로 돌아간다.
         let targetY = scrollY - top < headerHeight
             ? boundedScrollY(hides ? top + headerHeight : top)
