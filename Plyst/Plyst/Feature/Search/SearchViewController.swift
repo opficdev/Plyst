@@ -23,12 +23,14 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
         let showsClear: Bool
     }
 
-    private lazy var searchView: any SearchViewable = SearchView(frame: .zero)
+    private lazy var searchView = makeSearchView()
     private var collectionView: UICollectionView { searchView.collectionView }
     private let thumbnailCache = NSCache<NSString, UIImage>()
     private lazy var timeline = HomeTimelineScheduler { [weak self] now in
         self?.reactor.action.onNext(.timeChanged(now))
     }
+
+    private let makeSearchView: @MainActor () -> any SearchViewable
 
     private var displays = [CardDisplay]()
     private var renderedContent: SearchContent?
@@ -39,6 +41,19 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
     private var presentedFeedbackID: UUID?
     private var feedbackTask: Task<Void, Never>?
     private var didFocusSearchField = false
+
+    init(
+        reactor: SearchReactor,
+        makeSearchView: @escaping @MainActor () -> any SearchViewable
+    ) {
+        self.makeSearchView = makeSearchView
+        super.init(reactor: reactor)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is unavailable")
+    }
 
     override func loadView() {
         searchView.setOnChangeQuery { [weak self] query in

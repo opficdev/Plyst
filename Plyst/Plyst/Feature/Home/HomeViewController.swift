@@ -11,7 +11,7 @@ import UIKit
 
 @MainActor
 final class HomeViewController: ReactorViewController<HomeReactor> {
-    private lazy var homeView: any HomeViewable = HomeView(frame: .zero)
+    private lazy var homeView = makeHomeView()
     private var collectionView: UICollectionView { homeView.collectionView }
     private let thumbnailCache = NSCache<NSString, UIImage>()
     private lazy var timeline = HomeTimelineScheduler { [weak self] now in
@@ -24,6 +24,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     private var renderedFilter: HomeFilter?
     private var presentedFeedbackID: UUID?
     private var feedbackTask: Task<Void, Never>?
+    private let makeHomeView: @MainActor () -> any HomeViewable
     private let makeSearchViewController: @MainActor () -> UIViewController
 
     /// 상단 고정 항목이 있으면 section 0을 그 전용으로 두어 시간순 구간이 없어도 표시되게 한다.
@@ -31,8 +32,10 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     init(
         reactor: HomeReactor,
+        makeHomeView: @escaping @MainActor () -> any HomeViewable,
         makeSearchViewController: @escaping @MainActor () -> UIViewController
     ) {
+        self.makeHomeView = makeHomeView
         self.makeSearchViewController = makeSearchViewController
         super.init(reactor: reactor)
     }
