@@ -53,7 +53,11 @@ final class SearchReactorTests: XCTestCase {
     func testFilterAndQueryApplyTogether() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let plain = Clip(content: .text("report"), createdAt: Date(timeIntervalSinceReferenceDate: 100))
-        let pinned = Clip(content: .text("report pinned"), isPinned: true, createdAt: Date(timeIntervalSinceReferenceDate: 90))
+        let pinned = Clip(
+            content: .text("report pinned"),
+            isPinned: true,
+            createdAt: Date(timeIntervalSinceReferenceDate: 90)
+        )
         try await storage.insert(plain)
         try await storage.insert(pinned)
         let reactor = try makeReactor(storage: storage, writer: ClipboardWriterSpy())

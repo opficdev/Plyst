@@ -222,7 +222,10 @@ final class SearchReactor: Reactorable {
         }
     }
 
-    func reduce(state: State, mutation: Mutation) -> State {
+    func reduce(
+        state: State,
+        mutation: Mutation
+    ) -> State {
         var state = state
         switch mutation {
         case .clipsLoaded(let clips, let now):
@@ -262,18 +265,34 @@ final class SearchReactor: Reactorable {
             state.searchHistoryPhase = .failed
 
         case .searchHistoryWriteFailed(let id):
-            state.feedback = Feedback(id: id, message: "최근 검색어를 변경하지 못했습니다", isSuccess: false)
+            state.feedback = Feedback(
+                id: id,
+                message: "최근 검색어를 변경하지 못했습니다",
+                isSuccess: false
+            )
 
         case .copyResult(let result, let id):
             switch result {
             case .copied, .copiedWithoutLastUsedAt:
-                state.feedback = Feedback(id: id, message: "클립보드에 복사했습니다", isSuccess: true)
+                state.feedback = Feedback(
+                    id: id,
+                    message: "클립보드에 복사했습니다",
+                    isSuccess: true
+                )
             case .writeNotObserved:
-                state.feedback = Feedback(id: id, message: "클립보드에 복사하지 못했습니다", isSuccess: false)
+                state.feedback = Feedback(
+                    id: id,
+                    message: "클립보드에 복사하지 못했습니다",
+                    isSuccess: false
+                )
             }
 
         case .copyFailed(let id):
-            state.feedback = Feedback(id: id, message: "클립보드에 복사하지 못했습니다", isSuccess: false)
+            state.feedback = Feedback(
+                id: id,
+                message: "클립보드에 복사하지 못했습니다",
+                isSuccess: false
+            )
 
         case .feedbackDismissed(let id):
             if state.feedback?.id == id { state.feedback = nil }

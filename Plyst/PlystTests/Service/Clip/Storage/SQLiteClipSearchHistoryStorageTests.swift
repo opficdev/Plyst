@@ -180,7 +180,10 @@ final class SQLiteClipSearchHistoryStorageTests: XCTestCase {
         XCTAssertEqual(history, ClipSearchHistory())
     }
 
-    private func assertFirstEvent(_ stream: AsyncStream<ClipStorageEvent>, equalTo expected: ClipStorageEvent) async {
+    private func assertFirstEvent(
+        _ stream: AsyncStream<ClipStorageEvent>,
+        equalTo expected: ClipStorageEvent
+    ) async {
         let received = expectation(description: "검색어 변경은 이벤트를 발행하지 않음")
         let task = Task {
             var iterator = stream.makeAsyncIterator()
@@ -193,7 +196,10 @@ final class SQLiteClipSearchHistoryStorageTests: XCTestCase {
         await task.value
     }
 
-    private func assertError(_ expected: ClipStorageError, operation: () async throws -> Void) async {
+    private func assertError(
+        _ expected: ClipStorageError,
+        operation: () async throws -> Void
+    ) async {
         do {
             try await operation()
             XCTFail("저장소 작업이 예상한 오류 없이 성공함")

@@ -79,7 +79,11 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
             renderedContent = content
             renderedNow = state.now
             displays = content.results.map {
-                CardDisplay(result: $0, name: SearchCardText.name(for: $0), body: SearchCardText.body(for: $0))
+                CardDisplay(
+                    result: $0,
+                    name: SearchCardText.name(for: $0),
+                    body: SearchCardText.body(for: $0)
+                )
             }
             searchView.reloadContent()
         }
@@ -106,7 +110,11 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
         let display: RecentDisplay
         switch state.searchHistoryPhase {
         case .initial:
-            display = RecentDisplay(terms: [], message: nil, showsClear: false)
+            display = RecentDisplay(
+                terms: [],
+                message: nil,
+                showsClear: false
+            )
         case .loaded:
             let terms = state.searchHistory.terms
             display = RecentDisplay(
@@ -116,7 +124,11 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
             )
         case .failed:
             // 저장값이 손상돼도 전체 삭제로 복구할 수 있게 지우기를 남깁니다.
-            display = RecentDisplay(terms: [], message: "최근 검색어를 불러오지 못했어요.", showsClear: true)
+            display = RecentDisplay(
+                terms: [],
+                message: "최근 검색어를 불러오지 못했어요.",
+                showsClear: true
+            )
         }
         guard renderedRecent != display else { return }
         renderedRecent = display
@@ -213,7 +225,11 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
     ) -> HomeThumbnailKey? {
         guard case .image(let image) = clip.content else { return nil }
         let pixels = max(1, Int(ceil((width - 12) * traitCollection.displayScale)))
-        return HomeThumbnailKey(clipID: clip.id, fileID: image.fileID, maximumPixelDimension: pixels)
+        return HomeThumbnailKey(
+            clipID: clip.id,
+            fileID: image.fileID,
+            maximumPixelDimension: pixels
+        )
     }
 
     private func headerTitle() -> String {
@@ -221,48 +237,6 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
         let title = "결과 \(content.results.count)개"
         guard 0 < content.textCount, 0 < content.imageCount else { return title }
         return "\(title) · 텍스트 \(content.textCount) · 이미지 \(content.imageCount)"
-    }
-}
-
-extension SearchViewController: SearchViewDelegate {
-    func searchView(
-        _ view: SearchView,
-        didChangeQuery query: String
-    ) {
-        reactor.action.onNext(.changeQuery(query))
-    }
-
-    func searchViewDidSubmit(_ view: SearchView) {
-        reactor.action.onNext(.submitQuery)
-    }
-
-    func searchViewDidCancel(_ view: SearchView) {
-        navigationController?.popViewController(animated: true)
-    }
-
-    func searchView(
-        _ view: SearchView,
-        didSelectFilter filter: HomeFilter
-    ) {
-        reactor.action.onNext(.selectFilter(filter))
-    }
-
-    func searchView(
-        _ view: SearchView,
-        didSelectRecentTerm term: String
-    ) {
-        reactor.action.onNext(.selectRecentTerm(term))
-    }
-
-    func searchView(
-        _ view: SearchView,
-        didRemoveRecentTerm term: String
-    ) {
-        reactor.action.onNext(.removeRecentTerm(term))
-    }
-
-    func searchViewDidClearRecentTerms(_ view: SearchView) {
-        reactor.action.onNext(.clearRecentTerms)
     }
 }
 

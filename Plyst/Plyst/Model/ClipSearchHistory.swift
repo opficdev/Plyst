@@ -46,7 +46,10 @@ struct ClipSearchHistory: Equatable, Sendable {
         terms.removeAll { Self.isSame($0, query.text) }
     }
 
-    private static func isSame(_ lhs: String, _ rhs: String) -> Bool {
+    private static func isSame(
+        _ lhs: String,
+        _ rhs: String
+    ) -> Bool {
         lhs.compare(rhs, options: .caseInsensitive) == .orderedSame
     }
 }
