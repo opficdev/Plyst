@@ -23,6 +23,8 @@ final class HomeReactor: Reactorable {
         case dismissFeedback(UUID)
         case thumbnailRequested(HomeThumbnailKey)
         case thumbnailCancelled(HomeThumbnailKey)
+        case selectFilter(HomeFilter)
+        case setPinned(Clip.ID, Bool)
     }
 
     enum Mutation: Sendable {
@@ -38,6 +40,8 @@ final class HomeReactor: Reactorable {
         case thumbnailLoaded(HomeThumbnailKey, Data)
         case thumbnailFailed(HomeThumbnailKey)
         case thumbnailCancelled(HomeThumbnailKey)
+        case filterSelected(HomeFilter)
+        case pinFailed(UUID)
     }
 
     enum LoadPhase: Sendable {
@@ -62,9 +66,10 @@ final class HomeReactor: Reactorable {
         var thumbnailOrder = [HomeThumbnailKey]()
         var loadingThumbnails = Set<HomeThumbnailKey>()
         var failedThumbnails = Set<HomeThumbnailKey>()
+        var filter = HomeFilter.all
 
-        var sections: [HomeSection] {
-            HomeSection.make(from: clips, now: now, calendar: .current)
+        var content: HomeContent {
+            HomeContent.make(from: clips, filter: filter, now: now, calendar: .current)
         }
     }
 
@@ -149,6 +154,24 @@ final class HomeReactor: Reactorable {
 
         case .thumbnailCancelled(let key):
             return .just(.thumbnailCancelled(key))
+
+        case .selectFilter(let filter):
+            guard currentState.filter != filter else { return .empty() }
+            return .just(.filterSelected(filter))
+
+        case .setPinned(let id, let isPinned):
+            guard let clip = currentState.clips.first(where: { $0.id == id }),
+                  clip.isPinned != isPinned else { return .empty() }
+            let storage = storage
+            // 저장 확정 후 발행되는 updated 이벤트로 목록을 다시 조회하므로 성공 시 별도 Mutation이 없습니다.
+            return ReactorEffect.task {
+                _ = try await storage.update(
+                    id: id,
+                    change: .details(name: clip.name, memo: clip.memo, isPinned: isPinned)
+                )
+            }
+            .flatMap { _ in Observable<Mutation>.empty() }
+            .catch { _ in .just(.pinFailed(UUID())) }
         }
     }
 
@@ -231,6 +254,12 @@ final class HomeReactor: Reactorable {
 
         case .thumbnailCancelled(let key):
             state.loadingThumbnails.remove(key)
+
+        case .filterSelected(let filter):
+            state.filter = filter
+
+        case .pinFailed(let id):
+            state.feedback = Feedback(id: id, message: "고정 상태를 바꾸지 못했습니다", isSuccess: false)
         }
         return state
     }

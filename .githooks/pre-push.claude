@@ -89,6 +89,7 @@ Use git diff $base $local_sha -- for the exact change set. Inspect supporting fi
 Use the current request or issue and acceptance criteria when identifiable. Keep the review within the actual diff and applicable scope exclusions.
 
 Inspect correctness, regressions, error and cancellation handling, concurrency and resource lifetimes, persistence and event integrity, architecture and dependency boundaries, and meaningful test coverage against existing contracts.
+Inspect layout that can break on compact iPhones such as mini and SE models, including hardcoded dimensions, fixed widths or heights, and fixed offsets that do not adapt to the available width, height, or Safe Area. Report a finding only with the concrete screen condition and the element that overflows, clips, or overlaps.
 Read only. Do not create, edit, or delete files, policies, Git state, or external records. Do not request escalation, build, execute tests, or run, launch, install, boot, or open the app or Simulator.
 
 Return a JSON object matching the provided JSON schema, with only "verdict" and "review" fields.
