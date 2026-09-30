@@ -74,6 +74,60 @@ struct ClipImageFileStore: Sendable {
         }
     }
 
+    /// 원본을 Data로 적재하지 않고 첫 프레임을 표시 크기로 축소합니다. 저장된 파일은 변경하지 않습니다.
+    func loadThumbnail(
+        image: ClipImageMetadata,
+        maximumPixelDimension: Int
+    ) throws -> Data {
+        try Task.checkCancellation()
+        guard 0 < maximumPixelDimension else { throw ClipImageFileError.readFailed }
+        guard let directory = try directory(for: image.fileID) else {
+            throw ClipImageFileError.notFound(image.fileID)
+        }
+        let original = directory.appendingPathComponent("original")
+        guard let attributes = try attributes(at: original) else {
+            throw ClipImageFileError.notFound(image.fileID)
+        }
+        guard original.resolvingSymlinksInPath().standardizedFileURL == original.standardizedFileURL else {
+            throw ClipImageFileError.unsafePath
+        }
+        guard attributes[.type] as? FileAttributeType == .typeRegular else {
+            throw ClipImageFileError.unsafePath
+        }
+        guard attributes[.size] as? Int == image.byteCount else {
+            throw ClipImageFileError.corruptedImage(image.fileID)
+        }
+        let options = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithURL(original as CFURL, options),
+              CGImageSourceGetType(source) as String? == image.contentType,
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as NSDictionary?,
+              properties[kCGImagePropertyPixelWidth] as? Int == image.pixelWidth,
+              properties[kCGImagePropertyPixelHeight] as? Int == image.pixelHeight else {
+            throw ClipImageFileError.corruptedImage(image.fileID)
+        }
+        let thumbnailOptions = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maximumPixelDimension
+        ] as CFDictionary
+        guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions),
+              CGImageSourceGetStatusAtIndex(source, 0) == .statusComplete,
+              let output = CFDataCreateMutable(nil, 0),
+              let destination = CGImageDestinationCreateWithData(
+                output,
+                UTType.png.identifier as CFString,
+                1,
+                nil
+              ) else {
+            throw ClipImageFileError.corruptedImage(image.fileID)
+        }
+        try Task.checkCancellation()
+        CGImageDestinationAddImage(destination, thumbnail, nil)
+        guard CGImageDestinationFinalize(destination) else { throw ClipImageFileError.readFailed }
+        return output as Data
+    }
+
     /// 이미 존재하지 않는 파일은 삭제된 것으로 처리합니다.
     func delete(fileID: UUID) throws {
         guard let directory = try directory(for: fileID) else { return }

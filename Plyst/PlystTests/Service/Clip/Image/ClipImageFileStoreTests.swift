@@ -37,6 +37,37 @@ final class ClipImageFileStoreTests: XCTestCase {
         }
     }
 
+    func testThumbnailUsesFirstFrameAndPreservesOriginalBytes() throws {
+        let data = try ClipImageTestFixture.data(type: UTType.gif.identifier, count: 2)
+        let files = try ClipImageFileStore(rootURL: root)
+        let image = try files.save(data)
+
+        let thumbnail = try files.loadThumbnail(image: image, maximumPixelDimension: 1)
+        let source = try XCTUnwrap(CGImageSourceCreateWithData(thumbnail as CFData, nil))
+        let preview = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+
+        XCTAssertEqual(CGImageSourceGetType(source) as String?, UTType.png.identifier)
+        XCTAssertLessThanOrEqual(preview.width, 1)
+        XCTAssertLessThanOrEqual(preview.height, 1)
+        XCTAssertEqual(try files.load(fileID: image.fileID), data)
+    }
+
+    func testThumbnailRejectsMismatchedMetadata() throws {
+        let files = try ClipImageFileStore(rootURL: root)
+        let image = try files.save(ClipImageTestFixture.data())
+        let mismatch = ClipImageMetadata(
+            fileID: image.fileID,
+            contentType: image.contentType,
+            pixelWidth: image.pixelWidth + 1,
+            pixelHeight: image.pixelHeight,
+            byteCount: image.byteCount
+        )
+
+        XCTAssertThrowsError(try files.loadThumbnail(image: mismatch, maximumPixelDimension: 2)) {
+            XCTAssertEqual($0 as? ClipImageFileError, .corruptedImage(image.fileID))
+        }
+    }
+
     func testIdentifiersAreUniqueAndInjectedRootsAreIsolated() throws {
         let data = try ClipImageTestFixture.data()
         let files = try ClipImageFileStore(rootURL: root)
