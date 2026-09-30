@@ -5,48 +5,47 @@
 //  Created by opfic on 9/28/26.
 //
 
+import OSLog
 import UIKit
 
+@MainActor
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "opfic.Plyst",
+        category: String(describing: SceneDelegate.self)
+    )
 
     var window: UIWindow?
+    private var composition: HomeSceneComposition?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         let window = UIWindow(windowScene: windowScene)
-        let reactor = AppReactor()
-        let controller = ViewController(reactor: reactor)
-        window.rootViewController = UINavigationController(rootViewController: controller)
         self.window = window
+        configureRoot(in: window)
         window.makeKeyAndVisible()
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
-        // Called as the scene is being released by the system.
-        // This occurs shortly after the scene enters the background, or when its session is discarded.
-        // Release any resources associated with this scene that can be re-created the next time the scene connects.
-        // The scene may re-connect later, as its session was not necessarily discarded (see `application:didDiscardSceneSessions` instead).
+        window = nil
+        composition = nil
     }
 
-    func sceneDidBecomeActive(_ scene: UIScene) {
-        // Called when the scene has moved from an inactive state to an active state.
-        // Use this method to restart any tasks that were paused (or not yet started) when the scene was inactive.
-    }
-
-    func sceneWillResignActive(_ scene: UIScene) {
-        // Called when the scene will move from an active state to an inactive state.
-        // This may occur due to temporary interruptions (ex. an incoming phone call).
-    }
-
-    func sceneWillEnterForeground(_ scene: UIScene) {
-        // Called as the scene transitions from the background to the foreground.
-        // Use this method to undo the changes made on entering the background.
-    }
-
-    func sceneDidEnterBackground(_ scene: UIScene) {
-        // Called as the scene transitions from the foreground to the background.
-        // Use this method to save data, release shared resources, and store enough scene-specific state information
-        // to restore the scene back to its current state.
+    private func configureRoot(in window: UIWindow) {
+        do {
+            let composition = try HomeSceneComposition()
+            let root = composition.makeRootViewController()
+            self.composition = composition
+            window.rootViewController = root
+            composition.startPendingCleanupRecovery()
+        } catch {
+            Self.logger.error("기록 화면 초기화 실패: \(String(describing: type(of: error)), privacy: .public)")
+            composition = nil
+            window.rootViewController = StartupFailureViewController { [weak self] in
+                guard let self, let window = self.window else { return }
+                self.configureRoot(in: window)
+            }
+        }
     }
 }
