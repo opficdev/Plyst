@@ -142,6 +142,7 @@ make verify
 | `make lint` | 앱 코드와 테스트 코드의 SwiftLint 검사 |
 | `make build` | `Plyst` 앱 빌드 |
 | `make test-build` | 테스트를 실행하지 않는 `PlystTests` 컴파일 |
+| `make test` | 시뮬레이터에서 `PlystTests` 실행 |
 | `make verify` | SwiftLint, 앱 빌드, 테스트 타깃 컴파일 |
 
 ## 프로젝트 구조

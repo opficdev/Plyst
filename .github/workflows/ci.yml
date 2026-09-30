@@ -36,9 +36,9 @@ jobs:
   test-build:
     name: Test Build
     runs-on: xcode-27
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
 
-      - name: Build tests
-        run: make test-build XCODEBUILD_FLAGS=-skipMacroValidation
+      - name: Test
+        run: make test XCODEBUILD_FLAGS=-skipMacroValidation
