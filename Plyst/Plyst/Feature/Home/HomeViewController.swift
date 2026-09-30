@@ -19,7 +19,9 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     }
 
     private var sections = [HomeSection]()
+    private var pinnedClips = [Clip]()
     private var renderedNow: Date?
+    private var renderedFilter: HomeFilter?
     private var presentedFeedbackID: UUID?
     private var feedbackTask: Task<Void, Never>?
 
@@ -53,30 +55,43 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     }
 
     override func render(state: HomeReactor.State) {
-        let sections = state.sections
-        let sectionsChanged = self.sections != sections
-        if sectionsChanged || renderedNow != state.now {
-            self.sections = sections
+        let content = state.content
+        let contentChanged = sections != content.sections || pinnedClips != content.pinnedClips
+        if contentChanged || renderedNow != state.now {
+            sections = content.sections
+            pinnedClips = content.pinnedClips
             renderedNow = state.now
             homeView.reloadContent()
         }
-        if sectionsChanged { timeline.update(clips: state.clips) }
+        if contentChanged { timeline.update(clips: state.clips) }
+
+        if renderedFilter != state.filter {
+            let isFilterSwitch = renderedFilter != nil
+            renderedFilter = state.filter
+            homeView.setSelectedFilter(state.filter)
+            if isFilterSwitch { homeView.scrollToTop() }
+        }
 
         switch state.loadPhase {
         case .initial:
             homeView.hideEmptyState()
         case .loaded:
-            homeView.showEmptyState(
-                title: "아직 저장된 내용이 없습니다",
-                message: "텍스트나 이미지를 복사한 뒤 현재 클립보드 저장을 눌러보세요"
-            )
-            if !state.clips.isEmpty { homeView.hideEmptyState() }
+            if state.clips.isEmpty {
+                homeView.showEmptyState(title: HomeFilter.all.emptyTitle, message: HomeFilter.all.emptyMessage)
+            } else if content.isEmpty {
+                homeView.showEmptyState(title: state.filter.emptyTitle, message: state.filter.emptyMessage)
+            } else {
+                homeView.hideEmptyState()
+            }
         case .failed:
-            homeView.showEmptyState(
-                title: "기록을 불러오지 못했습니다",
-                message: "앱을 다시 열어 기록을 확인해 주세요"
-            )
-            if !state.clips.isEmpty { homeView.hideEmptyState() }
+            if state.clips.isEmpty {
+                homeView.showEmptyState(
+                    title: "기록을 불러오지 못했습니다",
+                    message: "앱을 다시 열어 기록을 확인해 주세요"
+                )
+            } else {
+                homeView.hideEmptyState()
+            }
         }
 
         homeView.setSaving(state.isSaving)
@@ -116,6 +131,36 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
                 cell.setThumbnail(image)
             }
         }
+        for view in collectionView.visibleSupplementaryViews(ofKind: HomeGridLayout.pinnedRowKind) {
+            guard let row = view as? HomePinnedRowView else { continue }
+            configurePinnedRow(row, state: state)
+        }
+    }
+
+    private func configurePinnedRow(
+        _ row: HomePinnedRowView,
+        state: HomeReactor.State
+    ) {
+        row.configure(
+            clips: pinnedClips,
+            now: state.now,
+            key: { [weak self] clip in self?.pinnedRowThumbnailKey(for: clip) },
+            thumbnail: { [weak self] key in self?.thumbnail(for: key, state: state) }
+        )
+        for clip in pinnedClips {
+            guard let key = pinnedRowThumbnailKey(for: clip), state.thumbnails[key] == nil else { continue }
+            reactor.action.onNext(.thumbnailRequested(key))
+        }
+    }
+
+    private func pinnedRowThumbnailKey(for clip: Clip) -> HomeThumbnailKey? {
+        guard case .image(let image) = clip.content else { return nil }
+        let pixels = max(1, Int(ceil(HomePinnedClipCell.thumbnailDimension * traitCollection.displayScale)))
+        return HomeThumbnailKey(
+            clipID: clip.id,
+            fileID: image.fileID,
+            maximumPixelDimension: pixels
+        )
     }
 
     private func thumbnail(
@@ -142,6 +187,13 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 extension HomeViewController: HomeViewDelegate {
     func homeViewDidRequestSave(_ view: HomeView) {
         reactor.action.onNext(.saveCurrentClipboard)
+    }
+
+    func homeView(
+        _ view: HomeView,
+        didSelectFilter filter: HomeFilter
+    ) {
+        reactor.action.onNext(.selectFilter(filter))
     }
 }
 
@@ -197,13 +249,25 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         viewForSupplementaryElementOfKind kind: String,
         at indexPath: IndexPath
     ) -> UICollectionReusableView {
-        guard let header = collectionView.dequeueReusableSupplementaryView(
-            ofKind: kind,
-            withReuseIdentifier: HomeSectionHeaderView.reuseIdentifier,
-            for: indexPath
-        ) as? HomeSectionHeaderView else { preconditionFailure("HomeSectionHeaderView registration mismatch") }
-        header.configure(title: sections[indexPath.section].kind.title)
-        return header
+        switch kind {
+        case HomeGridLayout.pinnedRowKind:
+            guard let row = collectionView.dequeueReusableSupplementaryView(
+                ofKind: kind,
+                withReuseIdentifier: HomePinnedRowView.reuseIdentifier,
+                for: indexPath
+            ) as? HomePinnedRowView else { preconditionFailure("HomePinnedRowView registration mismatch") }
+            configurePinnedRow(row, state: reactor.currentState)
+            return row
+
+        default:
+            guard let header = collectionView.dequeueReusableSupplementaryView(
+                ofKind: kind,
+                withReuseIdentifier: HomeSectionHeaderView.reuseIdentifier,
+                for: indexPath
+            ) as? HomeSectionHeaderView else { preconditionFailure("HomeSectionHeaderView registration mismatch") }
+            header.configure(title: sections[indexPath.section].kind.title)
+            return header
+        }
     }
 
     func collectionView(
@@ -243,5 +307,9 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         case .image:
             return HomeImageCell.height(for: clip, width: width)
         }
+    }
+
+    func homeLayoutHeightForPinnedRow(_ layout: HomeGridLayout) -> CGFloat {
+        pinnedClips.isEmpty ? 0 : HomePinnedRowView.height
     }
 }

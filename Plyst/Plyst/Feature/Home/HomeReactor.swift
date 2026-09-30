@@ -23,6 +23,7 @@ final class HomeReactor: Reactorable {
         case dismissFeedback(UUID)
         case thumbnailRequested(HomeThumbnailKey)
         case thumbnailCancelled(HomeThumbnailKey)
+        case selectFilter(HomeFilter)
     }
 
     enum Mutation: Sendable {
@@ -38,6 +39,7 @@ final class HomeReactor: Reactorable {
         case thumbnailLoaded(HomeThumbnailKey, Data)
         case thumbnailFailed(HomeThumbnailKey)
         case thumbnailCancelled(HomeThumbnailKey)
+        case filterSelected(HomeFilter)
     }
 
     enum LoadPhase: Sendable {
@@ -62,9 +64,10 @@ final class HomeReactor: Reactorable {
         var thumbnailOrder = [HomeThumbnailKey]()
         var loadingThumbnails = Set<HomeThumbnailKey>()
         var failedThumbnails = Set<HomeThumbnailKey>()
+        var filter = HomeFilter.all
 
-        var sections: [HomeSection] {
-            HomeSection.make(from: clips, now: now, calendar: .current)
+        var content: HomeContent {
+            HomeContent.make(from: clips, filter: filter, now: now, calendar: .current)
         }
     }
 
@@ -149,6 +152,10 @@ final class HomeReactor: Reactorable {
 
         case .thumbnailCancelled(let key):
             return .just(.thumbnailCancelled(key))
+
+        case .selectFilter(let filter):
+            guard currentState.filter != filter else { return .empty() }
+            return .just(.filterSelected(filter))
         }
     }
 
@@ -231,6 +238,9 @@ final class HomeReactor: Reactorable {
 
         case .thumbnailCancelled(let key):
             state.loadingThumbnails.remove(key)
+
+        case .filterSelected(let filter):
+            state.filter = filter
         }
         return state
     }

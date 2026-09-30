@@ -10,6 +10,10 @@ import UIKit
 @MainActor
 protocol HomeViewDelegate: AnyObject {
     func homeViewDidRequestSave(_ view: HomeView)
+    func homeView(
+        _ view: HomeView,
+        didSelectFilter filter: HomeFilter
+    )
 }
 
 @MainActor
@@ -38,6 +42,7 @@ final class HomeView: UIView {
     let layout = HomeGridLayout()
     private(set) lazy var collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
     private let titleHeader = HomeTitleHeaderView(frame: .zero)
+    private let filterBar = HomeFilterBarView()
     private let headerContainer = UIView()
     private let contentArea = UILayoutGuide()
     private let emptyState = HomeEmptyStateView()
@@ -103,6 +108,21 @@ final class HomeView: UIView {
     func setSaving(_ isSaving: Bool) {
         saveButton.isEnabled = !isSaving
         saveButton.alpha = isSaving ? 0.55 : 1
+    }
+
+    func setSelectedFilter(_ filter: HomeFilter) {
+        filterBar.setSelectedFilter(filter)
+    }
+
+    func scrollToTop() {
+        let wasUpdating = isUpdatingScrollGeometry
+        isUpdatingScrollGeometry = true
+        defer { isUpdatingScrollGeometry = wasUpdating }
+
+        hiddenHeaderHeight = 0
+        previousScrollY = -collectionView.contentInset.top
+        updateHeaderPresentation()
+        collectionView.setContentOffset(CGPoint(x: 0, y: -collectionView.contentInset.top), animated: true)
     }
 
     func showEmptyState(
@@ -187,7 +207,7 @@ final class HomeView: UIView {
     private func configureAppearance() {
         backgroundColor = UIColor(resource: .homeCanvas)
         headerContainer.backgroundColor = backgroundColor
-        headerContainer.isUserInteractionEnabled = false
+        headerContainer.isUserInteractionEnabled = true
 
         collectionView.backgroundColor = .clear
         collectionView.contentInsetAdjustmentBehavior = .never
@@ -229,6 +249,11 @@ final class HomeView: UIView {
             forSupplementaryViewOfKind: HomeGridLayout.headerKind,
             withReuseIdentifier: HomeSectionHeaderView.reuseIdentifier
         )
+        collectionView.register(
+            HomePinnedRowView.self,
+            forSupplementaryViewOfKind: HomeGridLayout.pinnedRowKind,
+            withReuseIdentifier: HomePinnedRowView.reuseIdentifier
+        )
     }
 
     private func makeHierarchy() {
@@ -237,6 +262,7 @@ final class HomeView: UIView {
         addSubview(emptyState)
         addSubview(headerContainer)
         headerContainer.addSubview(titleHeader)
+        headerContainer.addSubview(filterBar)
         addSubview(saveBar)
         saveBar.addSubview(saveButton)
         saveBar.addSubview(privacyRow)
@@ -246,6 +272,7 @@ final class HomeView: UIView {
     private func makeLayout() {
         headerContainer.translatesAutoresizingMaskIntoConstraints = false
         titleHeader.translatesAutoresizingMaskIntoConstraints = false
+        filterBar.translatesAutoresizingMaskIntoConstraints = false
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         emptyState.translatesAutoresizingMaskIntoConstraints = false
         saveBar.translatesAutoresizingMaskIntoConstraints = false
@@ -265,7 +292,11 @@ final class HomeView: UIView {
             titleHeader.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
             titleHeader.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
             titleHeader.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
-            titleHeader.bottomAnchor.constraint(equalTo: headerContainer.bottomAnchor),
+            titleHeader.bottomAnchor.constraint(equalTo: filterBar.topAnchor, constant: 4),
+            filterBar.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
+            filterBar.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
+            filterBar.heightAnchor.constraint(equalToConstant: 40),
+            filterBar.bottomAnchor.constraint(equalTo: headerContainer.bottomAnchor, constant: -12),
             contentArea.topAnchor.constraint(equalTo: headerContainer.bottomAnchor),
             contentArea.leadingAnchor.constraint(equalTo: collectionView.leadingAnchor),
             contentArea.trailingAnchor.constraint(equalTo: collectionView.trailingAnchor),
@@ -295,10 +326,20 @@ final class HomeView: UIView {
     }
 
     private func bindActions() {
+        filterBar.delegate = self
         saveButton.addAction(UIAction { [weak self] _ in
             guard let self else { return }
             delegate?.homeViewDidRequestSave(self)
         }, for: .touchUpInside)
     }
 
+}
+
+extension HomeView: HomeFilterBarViewDelegate {
+    func homeFilterBar(
+        _ view: HomeFilterBarView,
+        didSelect filter: HomeFilter
+    ) {
+        delegate?.homeView(self, didSelectFilter: filter)
+    }
 }
