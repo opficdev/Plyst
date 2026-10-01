@@ -61,7 +61,7 @@ struct ClipShareService: Sendable {
     ) async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
             provider.loadItem(forTypeIdentifier: typeIdentifier, options: nil) { item, error in
-                if let text = string(from: item) {
+                if let text = string(from: item, typeIdentifier: typeIdentifier) {
                     continuation.resume(returning: text)
                 } else {
                     continuation.resume(throwing: error ?? CocoaError(.fileReadUnknown))
@@ -71,18 +71,30 @@ struct ClipShareService: Sendable {
     }
 
     /// 항목의 실제 형식에 맞춰 문자열로 바꿉니다. 지원하지 않는 형식은 nil입니다.
-    private nonisolated static func string(from item: (any NSSecureCoding)?) -> String? {
+    private nonisolated static func string(
+        from item: (any NSSecureCoding)?,
+        typeIdentifier: String
+    ) -> String? {
         switch item {
         case let text as String:
             text
         case let url as URL:
             url.absoluteString
         case let data as Data:
-            String(data: data, encoding: .utf8)
+            urlString(from: data, typeIdentifier: typeIdentifier) ?? String(data: data, encoding: .utf8)
         case let attributed as NSAttributedString:
             attributed.string
         default:
             nil
         }
+    }
+
+    /// NSURL이 제공한 URL 데이터는 UTF-8 문자열이 아닐 수 있습니다. 따라서 NSURL의 해석을 먼저 사용합니다.
+    private nonisolated static func urlString(
+        from data: Data,
+        typeIdentifier: String
+    ) -> String? {
+        guard UTType(typeIdentifier)?.conforms(to: .url) == true else { return nil }
+        return (try? NSURL.object(withItemProviderData: data, typeIdentifier: typeIdentifier))?.absoluteString
     }
 }
