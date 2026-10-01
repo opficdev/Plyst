@@ -104,8 +104,9 @@ final class ImageDetailViewController: ReactorViewController<ImageDetailReactor>
     }
 
     private static func dateText(_ date: Date) -> String {
-        let day = date.formatted(.dateTime.year().month(.defaultDigits).day())
-        let time = date.formatted(.dateTime.hour().minute())
+        let locale = Locale(identifier: "ko_KR")
+        let day = date.formatted(.dateTime.year().month(.wide).day().locale(locale))
+        let time = date.formatted(.dateTime.hour().minute().locale(locale))
         return "\(day)\n\(time)"
     }
 

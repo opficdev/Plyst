@@ -103,10 +103,11 @@ final class TextDetailViewController: ReactorViewController<TextDetailReactor> {
         if state.isRemoved { close() }
     }
 
-    /// 날짜와 시각을 두 줄로 나눠 표시합니다. 기기 언어에 맞는 형식이며 칸 폭에서 줄바꿈 위치가 달라지지 않습니다.
+    /// 날짜는 한국어 년월일 형식으로 표시하고 시각은 다음 줄에 표시합니다.
     private static func dateText(_ date: Date) -> String {
-        let day = date.formatted(.dateTime.year().month(.defaultDigits).day())
-        let time = date.formatted(.dateTime.hour().minute())
+        let locale = Locale(identifier: "ko_KR")
+        let day = date.formatted(.dateTime.year().month(.wide).day().locale(locale))
+        let time = date.formatted(.dateTime.hour().minute().locale(locale))
         return "\(day)\n\(time)"
     }
 
