@@ -38,8 +38,11 @@ final class TextDetailView: UIView, TextDetailViewable {
     private let memoRow = UIStackView()
     private let memoView = UITextView()
     private let memoPlaceholder = UILabel()
-    private let datesView = TextDetailDatesView()
-    private lazy var actionBar = TextDetailActionBarView(send: send)
+    private let datesView = ClipDetailDatesView()
+    private lazy var actionBar = ClipDetailActionBarView(
+        copy: { [weak self] in self?.send(.copy) },
+        delete: { [weak self] in self?.send(.delete) }
+    )
     private let send: @MainActor (TextDetailViewAction) -> Void
 
     init(

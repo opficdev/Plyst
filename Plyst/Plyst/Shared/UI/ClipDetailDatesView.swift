@@ -1,5 +1,5 @@
 //
-//  TextDetailDatesView.swift
+//  ClipDetailDatesView.swift
 //  Plyst
 //
 //  Created by opfic on 10/1/26.
@@ -8,7 +8,7 @@
 import UIKit
 
 /// 저장한 날짜와 마지막 사용 시각을 두 칸으로 나란히 표시합니다.
-final class TextDetailDatesView: UIView {
+final class ClipDetailDatesView: UIView {
     private let stack = UIStackView()
     private let savedValue = UILabel()
     private let lastUsedValue = UILabel()
