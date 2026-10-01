@@ -30,6 +30,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     )
     private let makeHomeView: @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewable
     private let makeSearchViewController: @MainActor () -> UIViewController
+    private let makeTextDetailViewController: @MainActor (Clip) -> UIViewController
 
     /// 상단 고정 항목이 있으면 section 0을 그 전용으로 두어 시간순 구간이 없어도 표시되게 한다.
     private var pinnedRowSectionCount: Int { pinnedClips.isEmpty ? 0 : 1 }
@@ -37,10 +38,12 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     init(
         reactor: HomeReactor,
         makeHomeView: @escaping @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewable,
-        makeSearchViewController: @escaping @MainActor () -> UIViewController
+        makeSearchViewController: @escaping @MainActor () -> UIViewController,
+        makeTextDetailViewController: @escaping @MainActor (Clip) -> UIViewController
     ) {
         self.makeHomeView = makeHomeView
         self.makeSearchViewController = makeSearchViewController
+        self.makeTextDetailViewController = makeTextDetailViewController
         super.init(reactor: reactor)
     }
 
@@ -162,7 +165,15 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
         switch action {
         case .didScroll(let row):
             requestPinnedRowThumbnails(row, state: reactor.currentState)
+        case .select(let clip):
+            showTextDetail(for: clip)
         }
+    }
+
+    /// 이미 상세 화면이 떠 있으면 다시 열지 않습니다.
+    private func showTextDetail(for clip: Clip) {
+        guard case .text = clip.content, presentedViewController == nil else { return }
+        present(makeTextDetailViewController(clip), animated: true)
     }
 
     /// 썸네일 보관 개수보다 고정 이미지가 많아도 요청과 제거가 반복되지 않도록 보이는 카드만 요청한다.
@@ -292,6 +303,13 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
             header.configure(title: sections[indexPath.section - pinnedRowSectionCount].kind.title)
             return header
         }
+    }
+
+    func collectionView(
+        _ collectionView: UICollectionView,
+        didSelectItemAt indexPath: IndexPath
+    ) {
+        showTextDetail(for: clip(at: indexPath))
     }
 
     func collectionView(

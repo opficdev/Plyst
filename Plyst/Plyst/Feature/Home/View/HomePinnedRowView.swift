@@ -77,8 +77,16 @@ final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
         let item = HomePinnedClipView()
         item.translatesAutoresizingMaskIntoConstraints = false
         item.widthAnchor.constraint(equalToConstant: HomePinnedClipView.width).isActive = true
+        item.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapItem(_:))))
         stack.addArrangedSubview(item)
         return item
+    }
+
+    @objc private func didTapItem(_ recognizer: UITapGestureRecognizer) {
+        guard let item = recognizer.view as? HomePinnedClipView,
+              let index = items.firstIndex(where: { $0 === item }),
+              index < clips.count else { return }
+        send?(.select(clips[index]))
     }
 
     private func configureAppearance() {

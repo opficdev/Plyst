@@ -10,4 +10,5 @@ import Foundation
 /// 고정 행이 뷰 컨트롤러로 전달하는 이벤트입니다.
 enum HomePinnedRowViewAction {
     case didScroll(any HomePinnedRowViewable)
+    case select(Clip)
 }
