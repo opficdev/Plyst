@@ -37,9 +37,51 @@ jobs:
             timeout: 20
           - name: Test
             target: test
-            timeout: 30
+            timeout: 20
     steps:
       - uses: actions/checkout@v5
 
-      - name: ${{ matrix.name }}
-        run: make ${{ matrix.target }} XCODEBUILD_FLAGS=-skipMacroValidation
+      - name: Build
+        if: matrix.target == 'build'
+        run: make build XCODEBUILD_FLAGS=-skipMacroValidation
+
+      - name: Select simulator
+        if: matrix.target == 'test'
+        timeout-minutes: 2
+        run: echo "TEST_DEVICE_ID=$(make -s test-device-id)" >> "$GITHUB_ENV"
+
+      # 시뮬레이터를 빌드와 겹쳐 기동했을 때 빌드가 12분 안에 끝나지 않은 사례가 있어 시뮬레이터는 빌드 이후에 기동합니다.
+      - name: Build for testing
+        if: matrix.target == 'test'
+        timeout-minutes: 12
+        run: make test-build DESTINATION="platform=iOS Simulator,id=$TEST_DEVICE_ID" XCODEBUILD_FLAGS=-skipMacroValidation
+
+      - name: Boot simulator
+        if: matrix.target == 'test'
+        timeout-minutes: 5
+        run: |
+          xcrun simctl boot "$TEST_DEVICE_ID"
+          xcrun simctl bootstatus "$TEST_DEVICE_ID" -b
+
+      # 병렬 테스트는 복제 시뮬레이터 기동 지연과 멈춤의 원인으로 의심되어 CI에서만 끕니다.
+      - name: Test
+        if: matrix.target == 'test'
+        timeout-minutes: 6
+        run: make test-without-building XCODEBUILD_FLAGS="-skipMacroValidation -parallel-testing-enabled NO"
+
+      - name: Test summary
+        if: always() && matrix.target == 'test'
+        timeout-minutes: 2
+        run: |
+          if [ -d /tmp/plyst-test-results.xcresult ]; then
+            xcrun xcresulttool get test-results summary --path /tmp/plyst-test-results.xcresult
+          fi
+
+      - name: Simulator diagnostics
+        if: failure() && matrix.target == 'test'
+        timeout-minutes: 3
+        run: |
+          xcrun simctl list devices
+          xcrun simctl spawn "$TEST_DEVICE_ID" log show --last 15m --style compact \
+            --predicate 'process == "testmanagerd" OR process == "launchd_sim" OR subsystem CONTAINS "XCTest"' | tail -n 200 || true
+          ls -l ~/Library/Logs/DiagnosticReports || true
