@@ -81,6 +81,7 @@ final class SearchReactorTests: XCTestCase {
         XCTAssertEqual(reactor.currentState.searchHistoryPhase, .loaded)
 
         reactor.action.onNext(.changeQuery("  fresh "))
+        await waitForState(of: reactor) { $0.query == "  fresh " }
         reactor.action.onNext(.submitQuery)
         await waitForState(of: reactor) { $0.searchHistory.terms == ["fresh", "stored"] }
 
@@ -100,6 +101,7 @@ final class SearchReactorTests: XCTestCase {
         reactor.action.onNext(.viewDidLoad)
         await waitForState(of: reactor) { $0.searchHistoryPhase == .loaded }
         reactor.action.onNext(.changeQuery("   "))
+        await waitForState(of: reactor) { $0.query == "   " }
         reactor.action.onNext(.submitQuery)
         try await Task.sleep(for: .milliseconds(200))
 
@@ -130,6 +132,8 @@ final class SearchReactorTests: XCTestCase {
         reactor.action.onNext(.viewDidLoad)
         for term in ["a", "b", "c", "d"] {
             reactor.action.onNext(.changeQuery(term))
+            // submitQuery는 mutate 시점의 State.query를 읽으므로 변경이 반영된 뒤 제출합니다.
+            await waitForState(of: reactor) { $0.query == term }
             reactor.action.onNext(.submitQuery)
         }
         reactor.action.onNext(.removeRecentTerm("b"))
@@ -212,6 +216,7 @@ final class SearchReactorTests: XCTestCase {
             """)
 
         reactor.action.onNext(.changeQuery("fresh"))
+        await waitForState(of: reactor) { $0.query == "fresh" }
         reactor.action.onNext(.submitQuery)
         await waitForState(of: reactor) { $0.feedback?.isSuccess == false }
 

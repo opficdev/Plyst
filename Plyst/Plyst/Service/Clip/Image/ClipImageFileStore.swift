@@ -187,6 +187,8 @@ struct ClipImageFileStore: Sendable {
         let type = identifier as String
         let supported = CGImageSourceCopyTypeIdentifiers() as? [String] ?? []
         guard supported.contains(type), UTType(type)?.conforms(to: .image) == true else { throw ClipImageFileError.unsupportedImage }
+        // ImageIO는 잘린 GIF도 남은 프레임만으로 statusComplete를 반환하므로 종료 바이트(0x3B)로 잘림을 판별합니다.
+        if type == UTType.gif.identifier, data.last != 0x3B { throw ClipImageFileError.invalidImage }
         let count = CGImageSourceGetCount(source)
         guard 0 < count else { throw ClipImageFileError.invalidImage }
         var size = (width: 0, height: 0)
