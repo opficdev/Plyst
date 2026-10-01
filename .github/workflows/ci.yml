@@ -63,10 +63,11 @@ jobs:
         timeout-minutes: 5
         run: xcrun simctl bootstatus "$TEST_DEVICE_ID" -b
 
+      # 병렬 테스트는 복제 시뮬레이터 기동 지연과 멈춤의 원인으로 의심되어 CI에서만 끕니다.
       - name: Test
         if: matrix.target == 'test'
         timeout-minutes: 6
-        run: make test-without-building XCODEBUILD_FLAGS=-skipMacroValidation
+        run: make test-without-building XCODEBUILD_FLAGS="-skipMacroValidation -parallel-testing-enabled NO"
 
       - name: Test summary
         if: always() && matrix.target == 'test'
