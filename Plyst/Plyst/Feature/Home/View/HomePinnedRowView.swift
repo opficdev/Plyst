@@ -59,7 +59,8 @@ final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
                 clip: clip,
                 now: now,
                 key: clipKey,
-                thumbnail: clipKey.flatMap(thumbnail)
+                thumbnail: clipKey.flatMap(thumbnail),
+                onCopy: { [weak self] in self?.send?(.copy(clip.id)) }
             )
         }
     }

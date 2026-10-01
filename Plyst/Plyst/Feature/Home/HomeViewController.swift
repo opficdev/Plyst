@@ -167,6 +167,8 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
             requestPinnedRowThumbnails(row, state: reactor.currentState)
         case .select(let clip):
             showDetail(for: clip)
+        case .copy(let id):
+            reactor.action.onNext(.copy(id))
         }
     }
 
@@ -277,7 +279,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                 now: reactor.currentState.now,
                 name: nil,
                 body: nil,
-                onCopy: nil
+                onCopy: { [weak self] in self?.reactor.action.onNext(.copy(clip.id)) }
             )
             return cell
         case .image:
@@ -293,7 +295,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                     key: key,
                     thumbnail: thumbnails.image(for: key, data: reactor.currentState.thumbnails[key]),
                     name: nil,
-                    onCopy: nil
+                    onCopy: { [weak self] in self?.reactor.action.onNext(.copy(clip.id)) }
                 )
             }
             return cell
@@ -381,14 +383,14 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                 width: width,
                 name: nil,
                 body: nil,
-                showsCopy: false
+                showsCopy: true
             )
         case .image:
             return homeView.imageCellType.height(
                 for: clip,
                 width: width,
                 name: nil,
-                showsCopy: false
+                showsCopy: true
             )
         }
     }

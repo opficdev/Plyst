@@ -25,6 +25,7 @@ final class HomeReactor: Reactorable {
         case thumbnailCancelled(HomeThumbnailKey)
         case selectFilter(HomeFilter)
         case setPinned(Clip.ID, Bool)
+        case copy(Clip.ID)
     }
 
     enum Mutation: Sendable {
@@ -42,6 +43,8 @@ final class HomeReactor: Reactorable {
         case thumbnailCancelled(HomeThumbnailKey)
         case filterSelected(HomeFilter)
         case pinFailed(UUID)
+        case copyResult(ClipClipboardCopyResult, UUID)
+        case copyFailed(UUID)
     }
 
     enum LoadPhase: Sendable {
@@ -172,6 +175,12 @@ final class HomeReactor: Reactorable {
             }
             .flatMap { _ in Observable<Mutation>.empty() }
             .catch { _ in .just(.pinFailed(UUID())) }
+
+        case .copy(let id):
+            let clipboard = clipboard
+            return ReactorEffect.task { try await clipboard.copy(id: id) }
+                .map { Mutation.copyResult($0, UUID()) }
+                .catch { _ in .just(.copyFailed(UUID())) }
         }
     }
 
@@ -260,6 +269,29 @@ final class HomeReactor: Reactorable {
 
         case .pinFailed(let id):
             state.feedback = Feedback(id: id, message: "고정 상태를 바꾸지 못했습니다", isSuccess: false)
+
+        case .copyResult(let result, let id):
+            switch result {
+            case .copied, .copiedWithoutLastUsedAt:
+                state.feedback = Feedback(
+                    id: id,
+                    message: "클립보드에 복사했습니다",
+                    isSuccess: true
+                )
+            case .writeNotObserved:
+                state.feedback = Feedback(
+                    id: id,
+                    message: "클립보드에 복사하지 못했습니다",
+                    isSuccess: false
+                )
+            }
+
+        case .copyFailed(let id):
+            state.feedback = Feedback(
+                id: id,
+                message: "클립보드에 복사하지 못했습니다",
+                isSuccess: false
+            )
         }
         return state
     }

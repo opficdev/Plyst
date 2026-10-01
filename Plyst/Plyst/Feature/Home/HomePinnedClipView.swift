@@ -8,7 +8,7 @@
 import UIKit
 
 final class HomePinnedClipView: UIView {
-    static let width = CGFloat(228)
+    static let width = CGFloat(252)
     static let height = CGFloat(76)
     static let thumbnailDimension = CGFloat(56)
 
@@ -23,6 +23,8 @@ final class HomePinnedClipView: UIView {
     private let name = UILabel()
     private let metadata = UILabel()
     private lazy var textStack = UIStackView(arrangedSubviews: [name, metadata])
+    private let copyButton = HomeCopyButton()
+    private var onCopy: (() -> Void)?
 
     private(set) var representedKey: HomeThumbnailKey?
 
@@ -31,6 +33,7 @@ final class HomePinnedClipView: UIView {
         configureAppearance()
         makeHierarchy()
         makeLayout()
+        bindActions()
         bindTraitChanges()
     }
 
@@ -48,8 +51,10 @@ final class HomePinnedClipView: UIView {
         clip: Clip,
         now: Date,
         key: HomeThumbnailKey?,
-        thumbnail: UIImage?
+        thumbnail: UIImage?,
+        onCopy: @escaping () -> Void
     ) {
+        self.onCopy = onCopy
         switch clip.content {
         case .text(let text):
             representedKey = nil
@@ -114,6 +119,7 @@ final class HomePinnedClipView: UIView {
         visualBox.addSubview(quote)
         visualBox.addSubview(linkIcon)
         card.addSubview(textStack)
+        card.addSubview(copyButton)
     }
 
     private func makeLayout() {
@@ -144,9 +150,17 @@ final class HomePinnedClipView: UIView {
             linkIcon.widthAnchor.constraint(equalToConstant: 28),
             linkIcon.heightAnchor.constraint(equalToConstant: 28),
             textStack.leadingAnchor.constraint(equalTo: visualBox.trailingAnchor, constant: 10),
-            textStack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -12),
-            textStack.centerYAnchor.constraint(equalTo: card.centerYAnchor)
+            textStack.trailingAnchor.constraint(equalTo: copyButton.leadingAnchor, constant: -8),
+            textStack.centerYAnchor.constraint(equalTo: card.centerYAnchor),
+            copyButton.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -10),
+            copyButton.centerYAnchor.constraint(equalTo: card.centerYAnchor)
         ])
+    }
+
+    private func bindActions() {
+        copyButton.addAction(UIAction { [weak self] _ in
+            self?.onCopy?()
+        }, for: .touchUpInside)
     }
 
     private func bindTraitChanges() {
