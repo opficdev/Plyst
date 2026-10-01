@@ -17,6 +17,7 @@
 		DFA00013306A4A9700115D10 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00015306A4A9700115D10 /* GRDB */; };
 		DFA00014306A4A9700115D10 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00016306A4A9700115D10 /* GRDB */; };
 		DFC0000E306A4A9700115D10 /* PlystShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DFC00002306A4A9700115D10 /* PlystShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DFC00010306A4A9700115D10 /* ClipAppGroupDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFC0000F306A4A9700115D10 /* ClipAppGroupDirectory.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,6 +55,7 @@
 		DFEB0A21306A4A9500115D10 /* Plyst.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Plyst.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DFEB0A37306A4A9700115D10 /* PlystTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlystTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DFC00002306A4A9700115D10 /* PlystShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PlystShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DFC0000F306A4A9700115D10 /* ClipAppGroupDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Plyst/Service/Clip/ClipAppGroupDirectory.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -133,6 +135,7 @@
 				DFEB0A23306A4A9500115D10 /* Plyst */,
 				DFC00003306A4A9700115D10 /* PlystShareExtension */,
 				DFEB0A3A306A4A9700115D10 /* PlystTests */,
+				DFC0000F306A4A9700115D10 /* ClipAppGroupDirectory.swift */,
 				DFEB0A22306A4A9500115D10 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -310,6 +313,7 @@
 		DFC00005306A4A9700115D10 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				DFC00010306A4A9700115D10 /* ClipAppGroupDirectory.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
