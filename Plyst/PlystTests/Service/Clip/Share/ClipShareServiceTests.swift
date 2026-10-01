@@ -192,6 +192,130 @@ final class ClipShareServiceTests: XCTestCase {
         XCTAssertTrue(stored.isEmpty)
     }
 
+    func testImageProviderIsSavedAsOriginalUntitledImageClip() async throws {
+        let storage = try makeStorage()
+        let data = try makePNGData()
+        let item = makeItem(providers: [makeImageProvider(data: data)], title: "무시되는 제목")
+
+        let result = try await makeService(storage: storage).save(item)
+
+        let clip = try savedClip(result)
+        guard case .image(let image) = clip.content else { return XCTFail("이미지 클립 누락") }
+        XCTAssertNil(clip.name)
+        XCTAssertNil(clip.memo)
+        XCTAssertEqual(image.contentType, UTType.png.identifier)
+        XCTAssertEqual(image.pixelWidth, 2)
+        XCTAssertEqual(image.pixelHeight, 3)
+        XCTAssertEqual(image.byteCount, data.count)
+        let reopened = try makeStorage()
+        let stored = try await reopened.fetchAll(order: .createdAt)
+        XCTAssertEqual(stored, [clip])
+        let images = ClipImageService(storage: reopened, files: try ClipImageFileStore(rootURL: imagesDirectory))
+        let loaded = try await images.loadImage(id: clip.id)
+        XCTAssertEqual(loaded, data)
+        XCTAssertEqual(try imageEntryCount(), 1)
+    }
+
+    func testImageIsPreferredWhenProviderAlsoOffersURL() async throws {
+        let storage = try makeStorage()
+        let provider = makeImageProvider(data: try makePNGData())
+        provider.registerObject(try XCTUnwrap(URL(string: "https://example.com/image.png")) as NSURL, visibility: .all)
+        let item = makeItem(providers: [provider])
+
+        let result = try await makeService(storage: storage).save(item)
+
+        guard case .image = try savedClip(result).content else { return XCTFail("이미지 클립 누락") }
+    }
+
+    func testTextProviderBeforeImageProviderIsSavedAsText() async throws {
+        let storage = try makeStorage()
+        let item = makeItem(providers: [
+            NSItemProvider(object: "먼저 온 텍스트" as NSString),
+            makeImageProvider(data: try makePNGData())
+        ])
+
+        let result = try await makeService(storage: storage).save(item)
+
+        XCTAssertEqual(try savedClip(result).content, .text("먼저 온 텍스트"))
+    }
+
+    func testImageLoadFailureReturnsLoadFailedWithoutRecordAndCanBeRetried() async throws {
+        let storage = try makeStorage()
+        let provider = NSItemProvider()
+        provider.registerDataRepresentation(forTypeIdentifier: UTType.png.identifier, visibility: .all) { completion in
+            completion(nil, CocoaError(.fileReadUnknown))
+            return nil
+        }
+        let item = makeItem(providers: [provider])
+        let service = try makeService(storage: storage)
+
+        let first = try await service.save(item)
+        let second = try await service.save(item)
+
+        XCTAssertEqual(first, .loadFailed)
+        XCTAssertEqual(second, .loadFailed)
+        let stored = try await storage.fetchAll(order: .createdAt)
+        XCTAssertTrue(stored.isEmpty)
+        XCTAssertEqual(try imageEntryCount(), 0)
+    }
+
+    func testUndecodableImageDataThrowsWithoutRecordOrFile() async throws {
+        let storage = try makeStorage()
+        let item = makeItem(providers: [makeImageProvider(data: Data([0x01, 0x02, 0x03]))])
+
+        do {
+            _ = try await makeService(storage: storage).save(item)
+            XCTFail("이미지 검증 오류 전파 누락")
+        } catch {
+            XCTAssertTrue(error is ClipImageFileError)
+        }
+
+        let stored = try await storage.fetchAll(order: .createdAt)
+        XCTAssertTrue(stored.isEmpty)
+        XCTAssertEqual(try imageEntryCount(), 0)
+    }
+
+    func testImageStorageFailurePropagatesAndRemovesFile() async throws {
+        let storage = try makeStorage()
+        let spy = ClipClipboardStorageServiceSpy(
+            storage: storage,
+            beforeInsert: { throw ClipStorageError.writeFailed }
+        )
+        let item = makeItem(providers: [makeImageProvider(data: try makePNGData())])
+
+        do {
+            _ = try await makeService(storage: spy).save(item)
+            XCTFail("저장소 오류 전파 누락")
+        } catch {
+            XCTAssertEqual(error as? ClipStorageError, .writeFailed)
+        }
+
+        let stored = try await storage.fetchAll(order: .createdAt)
+        XCTAssertTrue(stored.isEmpty)
+        XCTAssertEqual(try imageEntryCount(), 0)
+    }
+
+    func testCancelledImageSaveThrowsCancellationWithoutRecordOrFile() async throws {
+        let storage = try makeStorage()
+        let item = makeItem(providers: [makeImageProvider(data: try makePNGData())])
+        let service = try makeService(storage: storage)
+
+        let task = Task {
+            try await service.save(item)
+        }
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            XCTFail("취소 전파 누락")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        let stored = try await storage.fetchAll(order: .createdAt)
+        XCTAssertTrue(stored.isEmpty)
+        XCTAssertEqual(try imageEntryCount(), 0)
+    }
+
     private var imagesDirectory: URL { directory.appendingPathComponent("images", isDirectory: true) }
 
     private func makeStorage() throws -> SQLiteClipStorageService {
@@ -203,8 +327,37 @@ final class ClipShareServiceTests: XCTestCase {
         return ClipShareService(storage: storage, images: ClipImageService(storage: storage, files: files))
     }
 
+    /// 이미지 루트 아래의 항목 수입니다. 저장된 이미지 하나당 디렉터리 하나가 있습니다.
+    private func imageEntryCount() throws -> Int {
+        try FileManager.default.contentsOfDirectory(atPath: imagesDirectory.path).count
+    }
+
     private func makeUnsupportedProvider() -> NSItemProvider {
         NSItemProvider(item: NSNumber(value: 1), typeIdentifier: UTType.data.identifier)
+    }
+
+    private func makeImageProvider(data: Data) -> NSItemProvider {
+        let provider = NSItemProvider()
+        provider.registerDataRepresentation(forTypeIdentifier: UTType.png.identifier, visibility: .all) { completion in
+            completion(data, nil)
+            return nil
+        }
+        return provider
+    }
+
+    private func makePNGData() throws -> Data {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 2, height: 3), format: format)
+        return try XCTUnwrap(renderer.pngData { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(
+                x: 0,
+                y: 0,
+                width: 2,
+                height: 3
+            ))
+        })
     }
 
     private func makeItem(
