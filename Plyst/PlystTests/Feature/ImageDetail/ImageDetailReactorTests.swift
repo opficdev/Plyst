@@ -195,6 +195,64 @@ final class ImageDetailReactorTests: XCTestCase {
         XCTAssertFalse(reactor.currentState.isSavingToPhotos)
     }
 
+    func testPhotoSaveForDeletedClipClosesScreenWithoutWriting() async throws {
+        let storage = try makeStorage()
+        let images = try makeImages(storage: storage)
+        let clip = try await images.saveImage(ClipImageTestFixture.data()).value
+        let spy = PhotoLibraryWriterSpy()
+        let reactor = makeReactor(
+            clip: clip,
+            storage: storage,
+            images: images,
+            photoWriter: spy
+        )
+        _ = try await images.delete(id: clip.id)
+
+        reactor.action.onNext(.saveToPhotos)
+        await waitForState(of: reactor) { $0.isRemoved }
+
+        XCTAssertTrue(spy.writes.isEmpty)
+        XCTAssertFalse(reactor.currentState.isSavingToPhotos)
+        XCTAssertNil(reactor.currentState.feedback)
+    }
+
+    func testActionsAreIgnoredWhileDeletingAndAfterRemoval() async throws {
+        let storage = try makeStorage()
+        let images = try makeImages(storage: storage)
+        let clip = try await images.saveImage(ClipImageTestFixture.data(), name: "원본").value
+        let clipboardSpy = ClipboardWriterSpy()
+        let photoSpy = PhotoLibraryWriterSpy()
+        let reactor = makeReactor(
+            clip: clip,
+            storage: storage,
+            images: images,
+            clipboardWriter: clipboardSpy,
+            photoWriter: photoSpy
+        )
+        reactor.action.onNext(.changeName("편집 중"))
+        await waitForState(of: reactor) { $0.canSave }
+
+        // 삭제를 시작한 직후의 상태에서 동작을 보내 삭제 중 guard를 확인합니다.
+        let actions = [ImageDetailReactor.Action.save, .copy, .delete, .saveToPhotos]
+        var ignoredWhileDeleting = [Bool]()
+        let disposable = reactor.state.subscribe(onNext: { [self] state in
+            guard state.isDeleting, ignoredWhileDeleting.isEmpty else { return }
+            ignoredWhileDeleting = actions.map { ignores($0, on: reactor) }
+        })
+        reactor.action.onNext(.delete)
+        await waitForState(of: reactor) { $0.isRemoved }
+        disposable.dispose()
+
+        XCTAssertEqual(ignoredWhileDeleting, [true, true, true, true])
+        let afterRemoval = actions + [.previewRequested(20)]
+        XCTAssertEqual(afterRemoval.map { ignores($0, on: reactor) }, [true, true, true, true, true])
+        XCTAssertTrue(clipboardSpy.contents.isEmpty)
+        XCTAssertTrue(photoSpy.writes.isEmpty)
+        XCTAssertEqual(photoSpy.authorizationCount, 0)
+        let stored = try await storage.fetch(id: clip.id)
+        XCTAssertNil(stored)
+    }
+
     func testExternalChangesKeepEditedDraftAndExternalDeletionClosesScreen() async throws {
         let storage = try makeStorage()
         let images = try makeImages(storage: storage)
@@ -252,6 +310,21 @@ final class ImageDetailReactorTests: XCTestCase {
                 writer: photoWriter
             )
         )
+    }
+
+    /// guard에 막힌 동작은 아무 Mutation도 내보내지 않고 즉시 완료됩니다.
+    private func ignores(
+        _ action: ImageDetailReactor.Action,
+        on reactor: ImageDetailReactor
+    ) -> Bool {
+        var didEmit = false
+        var didComplete = false
+        let disposable = reactor.mutate(action: action).subscribe(
+            onNext: { _ in didEmit = true },
+            onCompleted: { didComplete = true }
+        )
+        disposable.dispose()
+        return didComplete && !didEmit
     }
 
     private func waitForState(
