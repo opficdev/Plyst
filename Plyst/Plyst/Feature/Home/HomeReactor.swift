@@ -50,7 +50,7 @@ final class HomeReactor: Reactorable {
         case failed
     }
 
-    struct Feedback: Equatable, Sendable {
+    struct Feedback: FeedbackPresentable, Equatable {
         let id: UUID
         let message: String
         let isSuccess: Bool

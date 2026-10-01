@@ -34,11 +34,4 @@ protocol SearchViewable: UIView {
         title: String,
         message: String
     )
-
-    func showFeedback(
-        message: String,
-        isSuccess: Bool
-    )
-
-    func hideFeedback()
 }

@@ -13,7 +13,7 @@ import UIKit
 final class HomeViewController: ReactorViewController<HomeReactor> {
     private lazy var homeView = makeHomeView(makeSend())
     private var collectionView: UICollectionView { homeView.collectionView }
-    private let thumbnailCache = NSCache<NSString, UIImage>()
+    private let thumbnails = ThumbnailImageCache(countLimit: 48)
     private lazy var timeline = HomeTimelineScheduler { [weak self] now in
         self?.reactor.action.onNext(.timeChanged(now))
     }
@@ -22,8 +22,12 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     private var pinnedClips = [Clip]()
     private var renderedNow: Date?
     private var renderedFilter: HomeFilter?
-    private var presentedFeedbackID: UUID?
-    private var feedbackTask: Task<Void, Never>?
+    private lazy var feedbackPresenter = FeedbackPresenter(
+        host: homeView,
+        topAnchor: homeView.safeAreaLayoutGuide.topAnchor,
+        topInset: 12,
+        dismiss: { [weak self] in self?.reactor.action.onNext(.dismissFeedback($0)) }
+    )
     private let makeHomeView: @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewable
     private let makeSearchViewController: @MainActor () -> UIViewController
 
@@ -54,7 +58,6 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        thumbnailCache.countLimit = 48
         navigationController?.setNavigationBarHidden(true, animated: false)
         reactor.action.onNext(.viewDidLoad)
     }
@@ -67,10 +70,6 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         timeline.disappear()
-    }
-
-    deinit {
-        feedbackTask?.cancel()
     }
 
     override func render(state: HomeReactor.State) {
@@ -115,27 +114,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
         homeView.setSaving(state.isSaving)
         updateVisibleThumbnails(state: state)
-        showFeedback(state.feedback)
-    }
-
-    private func showFeedback(_ feedback: HomeReactor.Feedback?) {
-        guard let feedback else {
-            homeView.hideFeedback()
-            presentedFeedbackID = nil
-            return
-        }
-        guard presentedFeedbackID != feedback.id else { return }
-        presentedFeedbackID = feedback.id
-        homeView.showFeedback(
-            message: feedback.message,
-            isSuccess: feedback.isSuccess
-        )
-        feedbackTask?.cancel()
-        feedbackTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(2))
-            guard !Task.isCancelled else { return }
-            self?.reactor.action.onNext(.dismissFeedback(feedback.id))
-        }
+        feedbackPresenter.update(state.feedback)
     }
 
     private func updateVisibleThumbnails(state: HomeReactor.State) {
@@ -143,12 +122,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
             guard let cell = cell as? any HomeImageCellable,
                   let key = cell.representedKey,
                   let data = state.thumbnails[key] else { continue }
-            let cacheKey = "\(key.fileID.uuidString)-\(key.maximumPixelDimension)" as NSString
-            let image = thumbnailCache.object(forKey: cacheKey) ?? UIImage(data: data)
-            if let image {
-                thumbnailCache.setObject(image, forKey: cacheKey)
-                cell.setThumbnail(image)
-            }
+            if let image = thumbnails.image(for: key, data: data) { cell.setThumbnail(image) }
         }
         for view in collectionView.visibleSupplementaryViews(ofKind: HomeGridLayout.pinnedRowKind) {
             guard let row = view as? any HomePinnedRowViewable else { continue }
@@ -164,7 +138,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
             clips: pinnedClips,
             now: state.now,
             key: { [weak self] clip in self?.pinnedRowThumbnailKey(for: clip) },
-            thumbnail: { [weak self] key in self?.thumbnail(for: key, state: state) },
+            thumbnail: { [weak self] key in self?.thumbnails.image(for: key, data: state.thumbnails[key]) },
             send: { [weak self] action in self?.handle(action) }
         )
         requestPinnedRowThumbnails(row, state: state)
@@ -210,17 +184,6 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
             fileID: image.fileID,
             maximumPixelDimension: pixels
         )
-    }
-
-    private func thumbnail(
-        for key: HomeThumbnailKey,
-        state: HomeReactor.State
-    ) -> UIImage? {
-        let cacheKey = "\(key.fileID.uuidString)-\(key.maximumPixelDimension)" as NSString
-        if let image = thumbnailCache.object(forKey: cacheKey) { return image }
-        guard let data = state.thumbnails[key], let image = UIImage(data: data) else { return nil }
-        thumbnailCache.setObject(image, forKey: cacheKey)
-        return image
     }
 
     private func clip(at indexPath: IndexPath) -> Clip {
@@ -296,7 +259,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                     with: clip,
                     now: reactor.currentState.now,
                     key: key,
-                    thumbnail: thumbnail(for: key, state: reactor.currentState),
+                    thumbnail: thumbnails.image(for: key, data: reactor.currentState.thumbnails[key]),
                     name: nil,
                     onCopy: nil
                 )

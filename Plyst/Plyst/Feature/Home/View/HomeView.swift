@@ -40,7 +40,6 @@ final class HomeView: UIView, HomeViewable {
     private let lock = UIImageView(image: UIImage(systemName: "lock.fill"))
     private let privacy = UILabel()
     private lazy var privacyRow = UIStackView(arrangedSubviews: [lock, privacy])
-    private let toast = ToastView(textColor: UIColor(resource: .homeBottomText))
     private var headerHeight = CGFloat.zero
     private var hiddenHeaderHeight = CGFloat.zero
     private var scrollViewportSize = CGSize.zero
@@ -180,22 +179,6 @@ final class HomeView: UIView, HomeViewable {
         emptyState.isHidden = true
     }
 
-    func showFeedback(
-        message: String,
-        isSuccess: Bool
-    ) {
-        toast.show(
-            message: message,
-            backgroundColor: isSuccess
-                ? UIColor(resource: .homeFeedbackSuccess)
-                : UIColor(resource: .homeFeedbackFailure)
-        )
-    }
-
-    func hideFeedback() {
-        toast.hide()
-    }
-
     private func updateScrollGeometry() {
         guard 0 < bounds.width, 0 < bounds.height else { return }
         let height = headerContainer.bounds.height
@@ -309,7 +292,6 @@ final class HomeView: UIView, HomeViewable {
         addSubview(saveBar)
         saveBar.addSubview(saveButton)
         saveBar.addSubview(privacyRow)
-        addSubview(toast)
     }
 
     private func makeLayout() {
@@ -322,7 +304,6 @@ final class HomeView: UIView, HomeViewable {
         saveButton.translatesAutoresizingMaskIntoConstraints = false
         lock.translatesAutoresizingMaskIntoConstraints = false
         privacyRow.translatesAutoresizingMaskIntoConstraints = false
-        toast.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: topAnchor),
@@ -360,11 +341,7 @@ final class HomeView: UIView, HomeViewable {
             emptyState.centerXAnchor.constraint(equalTo: collectionView.centerXAnchor),
             emptyState.centerYAnchor.constraint(equalTo: contentArea.centerYAnchor, constant: 24),
             emptyState.leadingAnchor.constraint(greaterThanOrEqualTo: collectionView.leadingAnchor, constant: 40),
-            emptyState.trailingAnchor.constraint(lessThanOrEqualTo: collectionView.trailingAnchor, constant: -40),
-            toast.centerXAnchor.constraint(equalTo: centerXAnchor),
-            toast.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 12),
-            toast.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 20),
-            toast.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20)
+            emptyState.trailingAnchor.constraint(lessThanOrEqualTo: collectionView.trailingAnchor, constant: -40)
         ])
     }
 

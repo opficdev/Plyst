@@ -18,7 +18,6 @@ final class SearchView: UIView, SearchViewable {
     private let filterBar: HomeFilterBarView
     private let recentView: SearchRecentView
     private let emptyState = HomeEmptyStateView()
-    private let toast = ToastView(textColor: UIColor(resource: .homeBottomText))
     private let send: @MainActor (SearchViewAction) -> Void
 
     init(
@@ -116,22 +115,6 @@ final class SearchView: UIView, SearchViewable {
         emptyState.isHidden = false
     }
 
-    func showFeedback(
-        message: String,
-        isSuccess: Bool
-    ) {
-        toast.show(
-            message: message,
-            backgroundColor: isSuccess
-                ? UIColor(resource: .homeFeedbackSuccess)
-                : UIColor(resource: .homeFeedbackFailure)
-        )
-    }
-
-    func hideFeedback() {
-        toast.hide()
-    }
-
     private func configureAppearance() {
         backgroundColor = UIColor(resource: .homeCanvas)
 
@@ -185,7 +168,6 @@ final class SearchView: UIView, SearchViewable {
         addSubview(collectionView)
         addSubview(recentView)
         addSubview(emptyState)
-        addSubview(toast)
     }
 
     private func makeLayout() {
@@ -197,7 +179,6 @@ final class SearchView: UIView, SearchViewable {
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         recentView.translatesAutoresizingMaskIntoConstraints = false
         emptyState.translatesAutoresizingMaskIntoConstraints = false
-        toast.translatesAutoresizingMaskIntoConstraints = false
 
         cancelButton.setContentHuggingPriority(.required, for: .horizontal)
         cancelButton.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -232,11 +213,7 @@ final class SearchView: UIView, SearchViewable {
             emptyState.centerXAnchor.constraint(equalTo: collectionView.centerXAnchor),
             emptyState.centerYAnchor.constraint(equalTo: collectionView.centerYAnchor),
             emptyState.leadingAnchor.constraint(greaterThanOrEqualTo: collectionView.leadingAnchor, constant: 40),
-            emptyState.trailingAnchor.constraint(lessThanOrEqualTo: collectionView.trailingAnchor, constant: -40),
-            toast.centerXAnchor.constraint(equalTo: centerXAnchor),
-            toast.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 12),
-            toast.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 20),
-            toast.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20)
+            emptyState.trailingAnchor.constraint(lessThanOrEqualTo: collectionView.trailingAnchor, constant: -40)
         ])
     }
 
