@@ -32,6 +32,7 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
 
     private let makeSearchView: @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewable
     private let makeDetailViewController: @MainActor (Clip) -> UIViewController
+    private let cancel: @MainActor () -> Void
 
     private var displays = [CardDisplay]()
     private var renderedContent: SearchContent?
@@ -45,15 +46,18 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
         topInset: 12,
         dismiss: { [weak self] in self?.reactor.action.onNext(.dismissFeedback($0)) }
     )
-    private var didFocusSearchField = false
+    private var didEnter = false
 
+    /// 취소 동작은 내비게이션 스택에 의존하지 않고 표시한 쪽이 넘긴 cancel로 전달한다.
     init(
         reactor: SearchReactor,
         makeSearchView: @escaping @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewable,
-        makeDetailViewController: @escaping @MainActor (Clip) -> UIViewController
+        makeDetailViewController: @escaping @MainActor (Clip) -> UIViewController,
+        cancel: @escaping @MainActor () -> Void
     ) {
         self.makeSearchView = makeSearchView
         self.makeDetailViewController = makeDetailViewController
+        self.cancel = cancel
         super.init(reactor: reactor)
     }
 
@@ -71,7 +75,8 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
             case .submit:
                 reactor.action.onNext(.submitQuery)
             case .cancel:
-                navigationController?.popViewController(animated: true)
+                // 서치바를 접는 모션이 끝난 뒤에 표시한 쪽이 이 화면을 제거한다.
+                searchView.collapse(completion: cancel)
             case .selectFilter(let filter):
                 reactor.action.onNext(.selectFilter(filter))
             case .selectRecentTerm(let term):
@@ -93,16 +98,16 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationController?.setNavigationBarHidden(true, animated: false)
         reactor.action.onNext(.viewDidLoad)
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         timeline.appear()
-        if !didFocusSearchField {
-            didFocusSearchField = true
+        if !didEnter {
+            didEnter = true
             searchView.focusSearchField()
+            searchView.expand()
         }
     }
 

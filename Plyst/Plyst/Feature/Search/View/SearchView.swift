@@ -11,6 +11,7 @@ import UIKit
 final class SearchView: UIView, SearchViewable {
     let layout = HomeGridLayout()
     private(set) lazy var collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+    private let backdrop = UIView()
     private let fieldContainer = UIView()
     private let searchIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
     private let searchField = UITextField()
@@ -19,6 +20,10 @@ final class SearchView: UIView, SearchViewable {
     private let recentView: SearchRecentView
     private let emptyState = HomeEmptyStateView()
     private let send: @MainActor (SearchViewAction) -> Void
+    private lazy var fieldExpandedLeading = fieldContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20)
+    private lazy var fieldCollapsedWidth = fieldContainer.widthAnchor.constraint(equalToConstant: 0)
+    private lazy var body: [UIView] = [filterBar, collectionView, recentView, emptyState]
+    private var isExpanded = false
 
     init(
         frame: CGRect,
@@ -62,6 +67,19 @@ final class SearchView: UIView, SearchViewable {
 
     func focusSearchField() {
         searchField.becomeFirstResponder()
+    }
+
+    /// 헤더의 검색 버튼 자리에서 버튼이 xmark로 바뀌고 서치바가 leading 방향으로 늘어난다.
+    func expand() {
+        guard !isExpanded else { return }
+        setExpanded(true, completion: nil)
+    }
+
+    /// 확장과 반대 순서로 서치바를 줄인 뒤 completion을 호출한다. 이미 접는 중이면 무시한다.
+    func collapse(completion: @escaping @MainActor () -> Void) {
+        guard isExpanded else { return }
+        endEditing(true)
+        setExpanded(false, completion: completion)
     }
 
     /// 상태의 검색어와 다를 때만 필드를 갱신해 입력 중인 커서와 조합 중인 글자를 보존합니다.
@@ -115,12 +133,71 @@ final class SearchView: UIView, SearchViewable {
         emptyState.isHidden = false
     }
 
+    private static func makeButtonConfiguration(symbol: String) -> UIButton.Configuration {
+        var configuration = UIButton.Configuration.plain()
+        configuration.image = UIImage(
+            systemName: symbol,
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .semibold)
+        )
+        configuration.baseForegroundColor = UIColor(resource: .homePrimaryText)
+        configuration.background.backgroundColor = UIColor(resource: .homeCard)
+        configuration.background.strokeColor = UIColor(resource: .homeOutline)
+        configuration.background.strokeWidth = 1
+        configuration.cornerStyle = .capsule
+        return configuration
+    }
+
+    private func setExpanded(
+        _ isExpanded: Bool,
+        completion: (@MainActor () -> Void)?
+    ) {
+        self.isExpanded = isExpanded
+        layoutIfNeeded()
+        if isExpanded {
+            fieldCollapsedWidth.isActive = false
+            fieldExpandedLeading.isActive = true
+        } else {
+            fieldExpandedLeading.isActive = false
+            fieldCollapsedWidth.isActive = true
+        }
+        UIView.transition(
+            with: cancelButton,
+            duration: 0.3,
+            options: [.transitionCrossDissolve, .allowUserInteraction],
+            animations: { [weak self] in
+                self?.cancelButton.configuration = Self.makeButtonConfiguration(
+                    symbol: isExpanded ? "xmark" : "magnifyingglass"
+                )
+            }
+        )
+        UIView.animate(
+            withDuration: 0.3,
+            delay: 0,
+            options: [.beginFromCurrentState, .curveEaseInOut],
+            animations: { [weak self] in
+                guard let self else { return }
+                let alpha = isExpanded ? 1.0 : 0.0
+                backdrop.alpha = alpha
+                fieldContainer.alpha = alpha
+                for view in body { view.alpha = alpha }
+                layoutIfNeeded()
+            },
+            completion: { _ in completion?() }
+        )
+    }
+
     private func configureAppearance() {
-        backgroundColor = UIColor(resource: .homeCanvas)
+        // 접힌 상태는 기록 화면의 헤더와 시각적으로 같아야 하므로 배경과 서치바와 본문을 투명하게 시작한다.
+        backgroundColor = .clear
+        backdrop.backgroundColor = UIColor(resource: .homeCanvas)
+        backdrop.alpha = 0
+        for view in body { view.alpha = 0 }
 
         fieldContainer.backgroundColor = UIColor(resource: .homeCard)
-        fieldContainer.layer.cornerRadius = 14
-        fieldContainer.layer.borderWidth = 1.5
+        fieldContainer.layer.cornerRadius = 22
+        fieldContainer.layer.borderWidth = 1
+        fieldContainer.clipsToBounds = true
+        fieldContainer.alpha = 0
 
         searchIcon.tintColor = UIColor(resource: .homeSecondaryText)
         searchIcon.contentMode = .scaleAspectFit
@@ -134,15 +211,12 @@ final class SearchView: UIView, SearchViewable {
         searchField.spellCheckingType = .no
         searchField.autocapitalizationType = .none
 
-        cancelButton.setTitle("취소", for: .normal)
-        cancelButton.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
-        cancelButton.setTitleColor(UIColor(resource: .homePrimaryText), for: .normal)
+        cancelButton.configuration = Self.makeButtonConfiguration(symbol: "magnifyingglass")
 
         collectionView.backgroundColor = .clear
         collectionView.contentInsetAdjustmentBehavior = .never
         collectionView.alwaysBounceVertical = true
         collectionView.keyboardDismissMode = .onDrag
-        collectionView.contentInset.top = 8
         collectionView.contentInset.bottom = 16
         collectionView.isHidden = true
 
@@ -160,6 +234,7 @@ final class SearchView: UIView, SearchViewable {
     }
 
     private func makeHierarchy() {
+        addSubview(backdrop)
         addSubview(fieldContainer)
         fieldContainer.addSubview(searchIcon)
         fieldContainer.addSubview(searchField)
@@ -171,6 +246,7 @@ final class SearchView: UIView, SearchViewable {
     }
 
     private func makeLayout() {
+        backdrop.translatesAutoresizingMaskIntoConstraints = false
         fieldContainer.translatesAutoresizingMaskIntoConstraints = false
         searchIcon.translatesAutoresizingMaskIntoConstraints = false
         searchField.translatesAutoresizingMaskIntoConstraints = false
@@ -180,28 +256,38 @@ final class SearchView: UIView, SearchViewable {
         recentView.translatesAutoresizingMaskIntoConstraints = false
         emptyState.translatesAutoresizingMaskIntoConstraints = false
 
-        cancelButton.setContentHuggingPriority(.required, for: .horizontal)
-        cancelButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+        // 서치바 입력 필드는 접힌 너비에서 제약이 깨져도 되도록 trailing 우선순위를 낮춘다.
+        let fieldTrailing = searchField.trailingAnchor.constraint(equalTo: fieldContainer.trailingAnchor, constant: -12)
+        fieldTrailing.priority = .defaultHigh
 
         NSLayoutConstraint.activate([
-            fieldContainer.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 12),
-            fieldContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            fieldContainer.heightAnchor.constraint(equalToConstant: 46),
-            cancelButton.leadingAnchor.constraint(equalTo: fieldContainer.trailingAnchor, constant: 12),
+            backdrop.topAnchor.constraint(equalTo: topAnchor),
+            backdrop.leadingAnchor.constraint(equalTo: leadingAnchor),
+            backdrop.trailingAnchor.constraint(equalTo: trailingAnchor),
+            backdrop.bottomAnchor.constraint(equalTo: bottomAnchor),
+            // 기록 화면 헤더의 검색 버튼과 같은 자리에 놓이도록 마크 중심(safe area 상단 + 17) 기준으로 배치한다.
             cancelButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
-            cancelButton.centerYAnchor.constraint(equalTo: fieldContainer.centerYAnchor),
+            cancelButton.centerYAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 17),
+            cancelButton.widthAnchor.constraint(equalToConstant: 44),
+            cancelButton.heightAnchor.constraint(equalToConstant: 44),
+            fieldContainer.trailingAnchor.constraint(equalTo: cancelButton.leadingAnchor, constant: -12),
+            fieldContainer.centerYAnchor.constraint(equalTo: cancelButton.centerYAnchor),
+            fieldContainer.heightAnchor.constraint(equalToConstant: 44),
+            fieldCollapsedWidth,
             searchIcon.leadingAnchor.constraint(equalTo: fieldContainer.leadingAnchor, constant: 14),
             searchIcon.centerYAnchor.constraint(equalTo: fieldContainer.centerYAnchor),
             searchIcon.widthAnchor.constraint(equalToConstant: 18),
             searchIcon.heightAnchor.constraint(equalToConstant: 18),
             searchField.leadingAnchor.constraint(equalTo: searchIcon.trailingAnchor, constant: 10),
-            searchField.trailingAnchor.constraint(equalTo: fieldContainer.trailingAnchor, constant: -12),
+            fieldTrailing,
             searchField.topAnchor.constraint(equalTo: fieldContainer.topAnchor),
             searchField.bottomAnchor.constraint(equalTo: fieldContainer.bottomAnchor),
-            filterBar.topAnchor.constraint(equalTo: fieldContainer.bottomAnchor, constant: 12),
+            // 기록 화면의 필터 바와 같은 높이에 놓이도록 헤더 하단 간격(13)에서 필터 바 겹침(4)을 뺀 값이다.
+            filterBar.topAnchor.constraint(equalTo: fieldContainer.bottomAnchor, constant: 9),
             filterBar.leadingAnchor.constraint(equalTo: leadingAnchor),
             filterBar.trailingAnchor.constraint(equalTo: trailingAnchor),
             filterBar.heightAnchor.constraint(equalToConstant: 40),
+            // 기록 화면의 목록이 시작하는 헤더 하단과 같은 위치이며 최근 검색어도 같은 선에서 시작한다.
             collectionView.topAnchor.constraint(equalTo: filterBar.bottomAnchor, constant: 4),
             collectionView.leadingAnchor.constraint(equalTo: leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: trailingAnchor),

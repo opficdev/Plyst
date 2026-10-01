@@ -17,6 +17,8 @@ final class SearchRecentView: UIView {
     private let message = UILabel()
     private let hint = UILabel()
     private let send: @MainActor (SearchRecentViewAction) -> Void
+    private lazy var ruleTrailingToClear = rule.trailingAnchor.constraint(equalTo: clearButton.leadingAnchor, constant: -10)
+    private lazy var ruleTrailingToEdge = rule.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20)
 
     init(send: @escaping @MainActor (SearchRecentViewAction) -> Void) {
         self.send = send
@@ -53,6 +55,9 @@ final class SearchRecentView: UIView {
         message.text = text
         message.isHidden = text == nil
         clearButton.isHidden = !showsClear
+        // 지우기 버튼이 없으면 구분선이 다른 뷰들과 같은 오른쪽 여백까지 이어진다.
+        ruleTrailingToClear.isActive = showsClear
+        ruleTrailingToEdge.isActive = !showsClear
     }
 
     private func configureAppearance() {
@@ -108,7 +113,7 @@ final class SearchRecentView: UIView {
             clearButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
             rule.centerYAnchor.constraint(equalTo: title.centerYAnchor),
             rule.leadingAnchor.constraint(equalTo: title.trailingAnchor, constant: 10),
-            rule.trailingAnchor.constraint(equalTo: clearButton.leadingAnchor, constant: -10),
+            ruleTrailingToEdge,
             rule.heightAnchor.constraint(equalToConstant: 1),
             scrollView.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 14),
             scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),

@@ -21,6 +21,7 @@ protocol HomeViewable: UIView {
     func snapHeader()
     func setSaving(_ isSaving: Bool)
     func setSelectedFilter(_ filter: HomeFilter)
+    func setSearchButtonHidden(_ isHidden: Bool)
     func scrollToTop()
 
     func showEmptyState(

@@ -16,6 +16,8 @@ protocol SearchViewable: UIView {
     var sectionHeaderType: any HomeSectionHeaderViewable.Type { get }
 
     func focusSearchField()
+    func expand()
+    func collapse(completion: @escaping @MainActor () -> Void)
     func setQuery(_ query: String)
     func setSelectedFilter(_ filter: HomeFilter)
     func reloadContent()

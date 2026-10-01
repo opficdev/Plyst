@@ -78,7 +78,7 @@ final class HomeSceneComposition {
         let controller = HomeViewController(
             reactor: reactor,
             makeHomeView: { HomeView(frame: .zero, send: $0) },
-            makeSearchViewController: { [storage, clipboard, images, makeDetail] in
+            makeSearchViewController: { [storage, clipboard, images, makeDetail] cancel in
                 SearchViewController(
                     reactor: SearchReactor(
                         storage: storage,
@@ -87,14 +87,13 @@ final class HomeSceneComposition {
                         images: images
                     ),
                     makeSearchView: { SearchView(frame: .zero, send: $0) },
-                    makeDetailViewController: makeDetail
+                    makeDetailViewController: makeDetail,
+                    cancel: cancel
                 )
             },
             makeDetailViewController: makeDetail
         )
-        let navigation = UINavigationController(rootViewController: controller)
-        navigation.setNavigationBarHidden(true, animated: false)
-        return navigation
+        return controller
     }
 
     func startPendingCleanupRecovery() {
