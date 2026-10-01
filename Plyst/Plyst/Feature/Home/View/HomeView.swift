@@ -123,6 +123,11 @@ final class HomeView: UIView, HomeViewable {
         filterBar.setSelectedFilter(filter)
     }
 
+    /// 검색 화면이 같은 자리에 자신의 버튼을 그리는 동안 헤더의 버튼을 숨긴다.
+    func setSearchButtonHidden(_ isHidden: Bool) {
+        titleHeader.searchButton.isHidden = isHidden
+    }
+
     func scrollToTop() {
         let wasUpdating = isUpdatingScrollGeometry
         isUpdatingScrollGeometry = true
