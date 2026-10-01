@@ -161,6 +161,7 @@ final class TextDetailView: UIView, TextDetailViewable {
         pinLabel.text = "고정"
         pinLabel.font = .systemFont(ofSize: 16, weight: .medium)
         pinLabel.textColor = UIColor(resource: .homePrimaryText)
+        pinSwitch.onTintColor = UIColor(resource: .homeSwitchOn)
 
         nameField.font = .systemFont(ofSize: 17, weight: .medium)
         nameField.textColor = UIColor(resource: .homePrimaryText)
