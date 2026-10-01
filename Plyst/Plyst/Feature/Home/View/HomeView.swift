@@ -89,6 +89,11 @@ final class HomeView: UIView, HomeViewable {
         layout.invalidateLayout()
         collectionView.reloadData()
         collectionView.layoutIfNeeded()
+        collectionView.isScrollEnabled = 0 < collectionView.numberOfSections
+        if !collectionView.isScrollEnabled {
+            // 항목이 없으면 스크롤할 내용이 없으므로 상단에 고정해 이후 항목이 생겼을 때 헤더와 목록이 어긋나지 않게 한다.
+            collectionView.contentOffset.y = -collectionView.contentInset.top
+        }
         let scrollY = boundedScrollY(collectionView.contentOffset.y)
         previousScrollY = scrollY
         hiddenHeaderHeight = clampedHiddenHeaderHeight(hiddenHeaderHeight, scrollY: scrollY)
