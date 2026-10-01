@@ -26,6 +26,7 @@ final class HomeReactor: Reactorable {
         case selectFilter(HomeFilter)
         case setPinned(Clip.ID, Bool)
         case copy(Clip.ID)
+        case delete(Clip.ID)
     }
 
     enum Mutation: Sendable {
@@ -45,6 +46,7 @@ final class HomeReactor: Reactorable {
         case pinFailed(UUID)
         case copyResult(ClipClipboardCopyResult, UUID)
         case copyFailed(UUID)
+        case deleteFailed(UUID)
     }
 
     enum LoadPhase: Sendable {
@@ -181,6 +183,25 @@ final class HomeReactor: Reactorable {
             return ReactorEffect.task { try await clipboard.copy(id: id) }
                 .map { Mutation.copyResult($0, UUID()) }
                 .catch { _ in .just(.copyFailed(UUID())) }
+
+        case .delete(let id):
+            guard let clip = currentState.clips.first(where: { $0.id == id }) else { return .empty() }
+            let storage = storage
+            let images = images
+            // 삭제 확정 후 발행되는 deleted 이벤트로 목록을 다시 조회하므로 성공 시 별도 Mutation이 없습니다.
+            // 이미지 파일 정리가 보류돼도 DB 삭제는 확정된 결과로 처리합니다.
+            return ReactorEffect.task {
+                switch clip.content {
+                case .text:
+                    try await storage.delete(id: id)
+                case .image:
+                    _ = try await images.delete(id: id)
+                }
+            }
+            .flatMap { _ in Observable<Mutation>.empty() }
+            .catch { error in
+                Self.isNotFound(error) ? .empty() : .just(.deleteFailed(UUID()))
+            }
         }
     }
 
@@ -292,8 +313,20 @@ final class HomeReactor: Reactorable {
                 message: "클립보드에 복사하지 못했습니다",
                 isSuccess: false
             )
+
+        case .deleteFailed(let id):
+            state.feedback = Feedback(
+                id: id,
+                message: "삭제하지 못했습니다",
+                isSuccess: false
+            )
         }
         return state
+    }
+
+    private static func isNotFound(_ error: any Error) -> Bool {
+        guard let error = error as? ClipStorageError, case .notFound = error else { return false }
+        return true
     }
 
     private static func load(

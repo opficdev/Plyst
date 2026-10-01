@@ -11,5 +11,6 @@ import Foundation
 enum HomePinnedRowViewAction {
     case didScroll(any HomePinnedRowViewable)
     case select(Clip)
+    case showMenu(Clip)
     case copy(Clip.ID)
 }
