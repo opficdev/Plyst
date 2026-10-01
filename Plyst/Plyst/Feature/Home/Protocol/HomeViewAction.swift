@@ -12,4 +12,5 @@ enum HomeViewAction {
     case save
     case search
     case selectFilter(HomeFilter)
+    case showMenu(IndexPath)
 }

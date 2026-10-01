@@ -59,7 +59,8 @@ final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
                 clip: clip,
                 now: now,
                 key: clipKey,
-                thumbnail: clipKey.flatMap(thumbnail)
+                thumbnail: clipKey.flatMap(thumbnail),
+                onCopy: { [weak self] in self?.send?(.copy(clip.id)) }
             )
         }
     }
@@ -77,7 +78,13 @@ final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
         let item = HomePinnedClipView()
         item.translatesAutoresizingMaskIntoConstraints = false
         item.widthAnchor.constraint(equalToConstant: HomePinnedClipView.width).isActive = true
-        item.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapItem(_:))))
+        let tap = UITapGestureRecognizer(target: self, action: #selector(didTapItem(_:)))
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(didLongPressItem(_:)))
+        longPress.minimumPressDuration = 0.48
+        // 길게 누르기가 인식되면 탭이 상세 화면을 함께 열지 않도록 합니다.
+        tap.require(toFail: longPress)
+        item.addGestureRecognizer(tap)
+        item.addGestureRecognizer(longPress)
         stack.addArrangedSubview(item)
         return item
     }
@@ -87,6 +94,14 @@ final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
               let index = items.firstIndex(where: { $0 === item }),
               index < clips.count else { return }
         send?(.select(clips[index]))
+    }
+
+    @objc private func didLongPressItem(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began,
+              let item = recognizer.view as? HomePinnedClipView,
+              let index = items.firstIndex(where: { $0 === item }),
+              index < clips.count else { return }
+        send?(.showMenu(clips[index]))
     }
 
     private func configureAppearance() {

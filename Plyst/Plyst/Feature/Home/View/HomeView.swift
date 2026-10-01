@@ -365,6 +365,15 @@ final class HomeView: UIView, HomeViewable {
         titleHeader.searchButton.addAction(UIAction { [weak self] _ in
             self?.send(.search)
         }, for: .touchUpInside)
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(didLongPress(_:)))
+        longPress.minimumPressDuration = 0.48
+        collectionView.addGestureRecognizer(longPress)
     }
 
+    /// 고정 행은 supplementary view라서 indexPath가 nil이므로 격자 카드에서만 메뉴를 요청합니다.
+    @objc private func didLongPress(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began,
+              let indexPath = collectionView.indexPathForItem(at: recognizer.location(in: collectionView)) else { return }
+        send(.showMenu(indexPath))
+    }
 }

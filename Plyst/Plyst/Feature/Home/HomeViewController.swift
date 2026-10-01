@@ -30,7 +30,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     )
     private let makeHomeView: @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewable
     private let makeSearchViewController: @MainActor (@escaping @MainActor () -> Void) -> UIViewController
-    private let makeDetailViewController: @MainActor (Clip) -> UIViewController
+    let makeDetailViewController: @MainActor (Clip) -> UIViewController
     private var searchViewController: UIViewController?
 
     /// 상단 고정 항목이 있으면 section 0을 그 전용으로 두어 시간순 구간이 없어도 표시되게 한다.
@@ -157,6 +157,8 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
                 showSearch()
             case .selectFilter(let filter):
                 reactor.action.onNext(.selectFilter(filter))
+            case .showMenu(let indexPath):
+                showMenu(for: clip(at: indexPath))
             }
         }
     }
@@ -167,6 +169,10 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
             requestPinnedRowThumbnails(row, state: reactor.currentState)
         case .select(let clip):
             showDetail(for: clip)
+        case .showMenu(let clip):
+            showMenu(for: clip)
+        case .copy(let id):
+            reactor.action.onNext(.copy(id))
         }
     }
 
@@ -189,12 +195,6 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
         homeView.setSearchButtonHidden(false)
         timeline.appear()
         collectionView.scrollsToTop = true
-    }
-
-    /// 이미 상세 화면이 떠 있으면 다시 열지 않습니다.
-    private func showDetail(for clip: Clip) {
-        guard presentedViewController == nil else { return }
-        present(makeDetailViewController(clip), animated: true)
     }
 
     /// 썸네일 보관 개수보다 고정 이미지가 많아도 요청과 제거가 반복되지 않도록 보이는 카드만 요청한다.
@@ -277,7 +277,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                 now: reactor.currentState.now,
                 name: nil,
                 body: nil,
-                onCopy: nil
+                onCopy: { [weak self] in self?.reactor.action.onNext(.copy(clip.id)) }
             )
             return cell
         case .image:
@@ -293,7 +293,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                     key: key,
                     thumbnail: thumbnails.image(for: key, data: reactor.currentState.thumbnails[key]),
                     name: nil,
-                    onCopy: nil
+                    onCopy: { [weak self] in self?.reactor.action.onNext(.copy(clip.id)) }
                 )
             }
             return cell
@@ -381,14 +381,14 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                 width: width,
                 name: nil,
                 body: nil,
-                showsCopy: false
+                showsCopy: true
             )
         case .image:
             return homeView.imageCellType.height(
                 for: clip,
                 width: width,
                 name: nil,
-                showsCopy: false
+                showsCopy: true
             )
         }
     }
