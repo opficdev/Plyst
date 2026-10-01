@@ -95,7 +95,7 @@ final class TextDetailViewController: ReactorViewController<TextDetailReactor> {
         )
         detailView.setDates(
             saved: Self.dateText(clip.createdAt),
-            lastUsed: clip.lastUsedAt.map(Self.dateText) ?? "사용 기록 없음"
+            lastUsed: clip.lastUsedAt.map(Self.dateText) ?? ""
         )
         detailView.setSaveEnabled(state.canSave)
         detailView.setBusy(state.isDeleting)
@@ -103,8 +103,11 @@ final class TextDetailViewController: ReactorViewController<TextDetailReactor> {
         if state.isRemoved { close() }
     }
 
+    /// 날짜와 시각을 두 줄로 나눠 표시합니다. 기기 언어에 맞는 형식이며 칸 폭에서 줄바꿈 위치가 달라지지 않습니다.
     private static func dateText(_ date: Date) -> String {
-        DateFormatter.localizedString(from: date, dateStyle: .medium, timeStyle: .short)
+        let day = date.formatted(.dateTime.year().month(.defaultDigits).day())
+        let time = date.formatted(.dateTime.hour().minute())
+        return "\(day)\n\(time)"
     }
 
     /// 저장하지 않은 초안은 Reactor와 함께 사라지므로 닫기만 하면 폐기됩니다.
