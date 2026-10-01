@@ -45,7 +45,7 @@ final class TextDetailActionBarView: UIView {
         // 시트가 화면 아래에서 올라오는 동안에는 키보드 가이드가 뷰 위쪽에 있어 필수 제약으로 두면 충돌합니다.
         // 우선순위를 낮추고 키보드가 없을 때의 위치를 그보다 낮은 우선순위로 함께 둡니다.
         let keyboard = stack.bottomAnchor.constraint(equalTo: parent.keyboardLayoutGuide.topAnchor, constant: -12)
-        keyboard.priority = .defaultHigh
+        keyboard.priority = UILayoutPriority(999)
         let resting = stack.bottomAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.bottomAnchor, constant: -12)
         resting.priority = UILayoutPriority(998)
         NSLayoutConstraint.activate([
