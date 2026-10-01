@@ -15,6 +15,7 @@ XCODEBUILD_FLAGS ?=
 
 lint:
 	mise exec -- swiftlint lint --strict --no-cache --config .swiftlint.yml Plyst/Plyst
+	mise exec -- swiftlint lint --strict --no-cache --config .swiftlint.yml Plyst/PlystShareExtension
 	mise exec -- swiftlint lint --strict --no-cache --config .swiftlint-tests.yml Plyst/PlystTests
 
 build:
