@@ -74,7 +74,7 @@ final class TextDetailView: UIView, TextDetailViewable {
         memo: String,
         isPinned: Bool
     ) {
-        // 입력 중인 칸은 State보다 한 박자 늦은 값으로 덮어쓰면 그 사이에 입력한 글자가 사라집니다.
+        // State는 입력보다 늦게 도착하므로 입력 중인 칸에 대입하면 그 사이에 입력한 글자가 사라집니다.
         if !nameField.isFirstResponder, nameField.text != name { nameField.text = name }
         if !memoView.isFirstResponder, memoView.text != memo { memoView.text = memo }
         memoPlaceholder.isHidden = !memoView.text.isEmpty

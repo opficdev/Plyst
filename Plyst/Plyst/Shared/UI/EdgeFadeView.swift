@@ -61,7 +61,7 @@ final class EdgeFadeView: UIView {
     private func updateColors() {
         guard let gradient = layer as? CAGradientLayer else { return }
         let opaque = color.resolvedColor(with: traitCollection)
-        // 같은 색의 투명값을 써서 중간 구간에 검은 기운이 돌지 않게 합니다.
+        // 투명 구간도 같은 색의 알파 0 값을 써서 보간 중에 검은색이 섞이지 않게 합니다.
         let clear = opaque.withAlphaComponent(0)
         switch edge {
         case .top: gradient.colors = [opaque.cgColor, opaque.cgColor, clear.cgColor]
