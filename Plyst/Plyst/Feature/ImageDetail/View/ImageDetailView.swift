@@ -1,5 +1,5 @@
 //
-//  TextDetailView.swift
+//  ImageDetailView.swift
 //  Plyst
 //
 //  Created by opfic on 10/1/26.
@@ -8,18 +8,7 @@
 import UIKit
 
 @MainActor
-final class TextDetailView: UIView, TextDetailViewable {
-    private static let bodyAttributes: [NSAttributedString.Key: Any] = {
-        let style = NSMutableParagraphStyle()
-        style.minimumLineHeight = 35
-        style.maximumLineHeight = 35
-        return [
-            .font: UIFont.systemFont(ofSize: 22, weight: .medium),
-            .foregroundColor: UIColor(resource: .homePrimaryText),
-            .paragraphStyle: style
-        ]
-    }()
-
+final class ImageDetailView: UIView, ImageDetailViewable {
     private let topBar = UIView()
     private let closeButton = DetailBarButton(style: .icon("xmark"))
     private let titleLabel = UILabel()
@@ -28,26 +17,29 @@ final class TextDetailView: UIView, TextDetailViewable {
     private let contentStack = UIStackView()
     private let card = UIView()
     private let metaLabel = UILabel()
-    private let textView = UITextView()
+    private let imageView = UIImageView()
+    private let previewMessage = UILabel()
+    private let photoButton = UIButton(type: .system)
     private let fieldsStack = UIStackView()
     private let nameRow = UIStackView()
+    private let nameLabel = UILabel()
     private let nameField = UITextField()
     private let pinRow = UIStackView()
     private let pinLabel = UILabel()
     private let pinSwitch = UISwitch()
-    private let memoRow = UIStackView()
-    private let memoView = UITextView()
-    private let memoPlaceholder = UILabel()
     private let datesView = ClipDetailDatesView()
     private lazy var actionBar = ClipDetailActionBarView(
         copy: { [weak self] in self?.send(.copy) },
         delete: { [weak self] in self?.send(.delete) }
     )
-    private let send: @MainActor (TextDetailViewAction) -> Void
+    private var aspectConstraint: NSLayoutConstraint?
+    private var isBusy = false
+    private var isSavingToPhotos = false
+    private let send: @MainActor (ImageDetailViewAction) -> Void
 
     init(
         frame: CGRect,
-        send: @escaping @MainActor (TextDetailViewAction) -> Void
+        send: @escaping @MainActor (ImageDetailViewAction) -> Void
     ) {
         self.send = send
         super.init(frame: frame)
@@ -63,24 +55,31 @@ final class TextDetailView: UIView, TextDetailViewable {
         fatalError("init(coder:) is unavailable")
     }
 
-    func setContent(
-        meta: String,
-        text: String
-    ) {
+    func setContent(meta: String) {
         metaLabel.text = meta
-        guard textView.text != text else { return }
-        textView.attributedText = NSAttributedString(string: text, attributes: Self.bodyAttributes)
+    }
+
+    func setPreview(
+        _ image: UIImage?,
+        isLoading: Bool,
+        didFail: Bool
+    ) {
+        if imageView.image !== image {
+            imageView.image = image
+            if let image, 0 < image.size.width {
+                setAspectRatio(image.size.height / image.size.width)
+            }
+        }
+        previewMessage.isHidden = image != nil
+        previewMessage.text = didFail ? "이미지를 불러오지 못했습니다" : (isLoading ? "이미지를 불러오는 중입니다" : "")
     }
 
     func setDraft(
         name: String,
-        memo: String,
         isPinned: Bool
     ) {
-        // State는 입력보다 늦게 도착하므로 입력 중인 칸에 대입하면 그 사이에 입력한 글자가 사라집니다.
+        // 입력 중인 칸은 늦게 도착한 State로 덮어쓰지 않습니다.
         if !nameField.isFirstResponder, nameField.text != name { nameField.text = name }
-        if !memoView.isFirstResponder, memoView.text != memo { memoView.text = memo }
-        memoPlaceholder.isHidden = !memoView.text.isEmpty
         if pinSwitch.isOn != isPinned { pinSwitch.setOn(isPinned, animated: true) }
     }
 
@@ -96,64 +95,59 @@ final class TextDetailView: UIView, TextDetailViewable {
     }
 
     func setBusy(_ isBusy: Bool) {
+        self.isBusy = isBusy
         actionBar.setBusy(isBusy)
+        updatePhotoButton()
     }
 
-    func focusName() {
-        nameField.becomeFirstResponder()
+    func setSavingToPhotos(_ isSaving: Bool) {
+        isSavingToPhotos = isSaving
+        updatePhotoButton()
     }
 
-    var feedbackTopAnchor: NSLayoutYAxisAnchor {
-        topBar.bottomAnchor
-    }
-
-    private static func makeCaption(_ text: String) -> UILabel {
-        let label = UILabel()
-        label.attributedText = NSAttributedString(
-            string: text,
-            attributes: [
-                .font: UIFont.monospacedSystemFont(ofSize: 11, weight: .semibold),
-                .foregroundColor: UIColor(resource: .homeSecondaryText),
-                .kern: 0.88
-            ]
-        )
-        return label
-    }
-
-    private static func makeDivider() -> UIView {
-        let divider = UIView()
-        divider.backgroundColor = UIColor(resource: .homeOutline)
-        divider.translatesAutoresizingMaskIntoConstraints = false
-        divider.heightAnchor.constraint(equalToConstant: 1).isActive = true
-        return divider
-    }
+    var feedbackTopAnchor: NSLayoutYAxisAnchor { topBar.bottomAnchor }
 
     private func configureAppearance() {
         backgroundColor = UIColor(resource: .homeCanvas)
-
-        titleLabel.text = "텍스트"
+        titleLabel.text = "이미지"
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = UIColor(resource: .homePrimaryText)
-
         scrollView.keyboardDismissMode = .interactive
         scrollView.alwaysBounceVertical = true
         contentStack.axis = .vertical
-
+        contentStack.spacing = 12
         card.backgroundColor = UIColor(resource: .homeCard)
-        card.layer.cornerRadius = 18
+        card.layer.cornerRadius = 22
         card.layer.borderWidth = 1
-        metaLabel.font = .monospacedSystemFont(ofSize: 11.5, weight: .medium)
+        card.clipsToBounds = true
+        metaLabel.font = .monospacedSystemFont(ofSize: 12, weight: .medium)
         metaLabel.textColor = UIColor(resource: .homeSecondaryText)
-        textView.isEditable = false
-        textView.isScrollEnabled = false
-        textView.backgroundColor = .clear
-        textView.textContainerInset = .zero
-        textView.textContainer.lineFragmentPadding = 0
+        metaLabel.numberOfLines = 0
+        imageView.contentMode = .scaleAspectFit
+        imageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        previewMessage.font = .systemFont(ofSize: 14)
+        previewMessage.textColor = UIColor(resource: .homeSecondaryText)
+        previewMessage.textAlignment = .center
+        previewMessage.numberOfLines = 0
+
+        var photo = UIButton.Configuration.tinted()
+        photo.title = "사진 앱에 저장"
+        photo.image = UIImage(systemName: "square.and.arrow.down")
+        photo.imagePadding = 8
+        photo.baseForegroundColor = UIColor(resource: .homePrimaryText)
+        photo.baseBackgroundColor = UIColor(resource: .homeCard)
+        photo.contentInsets = NSDirectionalEdgeInsets(
+            top: 14,
+            leading: 12,
+            bottom: 14,
+            trailing: 12
+        )
+        photoButton.configuration = photo
 
         fieldsStack.axis = .vertical
-        for row in [nameRow, memoRow] {
-            row.axis = .vertical
-            row.spacing = 4
+        nameRow.axis = .vertical
+        nameRow.spacing = 4
+        for row in [nameRow, pinRow] {
             row.isLayoutMarginsRelativeArrangement = true
             row.layoutMargins = UIEdgeInsets(
                 top: 12,
@@ -162,20 +156,9 @@ final class TextDetailView: UIView, TextDetailViewable {
                 right: 4
             )
         }
-        pinRow.axis = .horizontal
-        pinRow.alignment = .center
-        pinRow.isLayoutMarginsRelativeArrangement = true
-        pinRow.layoutMargins = UIEdgeInsets(
-            top: 14,
-            left: 4,
-            bottom: 14,
-            right: 4
-        )
-        pinLabel.text = "고정"
-        pinLabel.font = .systemFont(ofSize: 16, weight: .medium)
-        pinLabel.textColor = UIColor(resource: .homePrimaryText)
-        pinSwitch.onTintColor = UIColor(resource: .homeSwitchOn)
-
+        nameLabel.text = "이름"
+        nameLabel.font = .monospacedSystemFont(ofSize: 11, weight: .semibold)
+        nameLabel.textColor = UIColor(resource: .homeSecondaryText)
         nameField.font = .systemFont(ofSize: 17, weight: .medium)
         nameField.textColor = UIColor(resource: .homePrimaryText)
         nameField.attributedPlaceholder = NSAttributedString(
@@ -183,58 +166,49 @@ final class TextDetailView: UIView, TextDetailViewable {
             attributes: [.foregroundColor: UIColor(resource: .homePlaceholder)]
         )
         nameField.returnKeyType = .done
-
-        memoView.font = .systemFont(ofSize: 16)
-        memoView.textColor = UIColor(resource: .homePrimaryText)
-        memoView.backgroundColor = .clear
-        memoView.isScrollEnabled = false
-        memoView.textContainerInset = .zero
-        memoView.textContainer.lineFragmentPadding = 0
-        memoPlaceholder.text = "이 내용을 언제 쓰는지 적어 두세요"
-        memoPlaceholder.font = .systemFont(ofSize: 16)
-        memoPlaceholder.textColor = UIColor(resource: .homePlaceholder)
+        pinRow.axis = .horizontal
+        pinRow.alignment = .center
+        pinLabel.text = "고정"
+        pinLabel.font = .systemFont(ofSize: 16, weight: .medium)
+        pinLabel.textColor = UIColor(resource: .homePrimaryText)
+        pinSwitch.onTintColor = UIColor(resource: .homeSwitchOn)
     }
 
     private func makeHierarchy() {
         addSubview(scrollView)
         addSubview(actionBar)
         addSubview(topBar)
-
         topBar.addSubview(closeButton)
         topBar.addSubview(titleLabel)
         topBar.addSubview(saveButton)
-
         scrollView.addSubview(contentStack)
         card.addSubview(metaLabel)
-        card.addSubview(textView)
+        card.addSubview(imageView)
+        card.addSubview(previewMessage)
         contentStack.addArrangedSubview(card)
+        contentStack.addArrangedSubview(photoButton)
         contentStack.addArrangedSubview(fieldsStack)
         contentStack.addArrangedSubview(datesView)
-        contentStack.setCustomSpacing(10, after: card)
         contentStack.setCustomSpacing(18, after: fieldsStack)
-
-        nameRow.addArrangedSubview(Self.makeCaption("이름"))
+        nameRow.addArrangedSubview(nameLabel)
         nameRow.addArrangedSubview(nameField)
         pinRow.addArrangedSubview(pinLabel)
         pinRow.addArrangedSubview(pinSwitch)
-        memoRow.addArrangedSubview(Self.makeCaption("메모"))
-        memoRow.addArrangedSubview(memoView)
-        memoRow.addSubview(memoPlaceholder)
         fieldsStack.addArrangedSubview(nameRow)
         fieldsStack.addArrangedSubview(Self.makeDivider())
         fieldsStack.addArrangedSubview(pinRow)
         fieldsStack.addArrangedSubview(Self.makeDivider())
-        fieldsStack.addArrangedSubview(memoRow)
-        fieldsStack.addArrangedSubview(Self.makeDivider())
     }
 
     private func makeLayout() {
-        for view in [
-            topBar, titleLabel, scrollView, contentStack, metaLabel, textView, memoView, memoPlaceholder
-        ] {
+        for view in [topBar, titleLabel, scrollView, contentStack, metaLabel, imageView, previewMessage] {
             view.translatesAutoresizingMaskIntoConstraints = false
         }
-
+        // 비율보다 상한과 하한을 우선합니다. 시트가 나타나는 동안의 작은 높이에도 제약 충돌을 피합니다.
+        let minimum = imageView.heightAnchor.constraint(greaterThanOrEqualToConstant: 96)
+        minimum.priority = UILayoutPriority(998)
+        let maximum = imageView.heightAnchor.constraint(lessThanOrEqualTo: safeAreaLayoutGuide.heightAnchor, multiplier: 0.6)
+        maximum.priority = UILayoutPriority(999)
         NSLayoutConstraint.activate([
             topBar.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 12),
             topBar.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -246,7 +220,6 @@ final class TextDetailView: UIView, TextDetailViewable {
             saveButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -16),
             titleLabel.centerXAnchor.constraint(equalTo: topBar.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: closeButton.centerYAnchor),
-
             scrollView.topAnchor.constraint(equalTo: topBar.bottomAnchor),
             scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -256,26 +229,48 @@ final class TextDetailView: UIView, TextDetailViewable {
             contentStack.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor, constant: 16),
             contentStack.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor, constant: -16),
             contentStack.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor, constant: -32),
-
-            metaLabel.topAnchor.constraint(equalTo: card.topAnchor, constant: 18),
-            metaLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
-            metaLabel.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
-            textView.topAnchor.constraint(equalTo: metaLabel.bottomAnchor, constant: 12),
-            textView.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
-            textView.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
-            textView.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -22),
-
-            memoView.heightAnchor.constraint(greaterThanOrEqualToConstant: 64),
-            memoPlaceholder.topAnchor.constraint(equalTo: memoView.topAnchor),
-            memoPlaceholder.leadingAnchor.constraint(equalTo: memoView.leadingAnchor),
-            memoPlaceholder.trailingAnchor.constraint(lessThanOrEqualTo: memoView.trailingAnchor)
+            metaLabel.topAnchor.constraint(equalTo: card.topAnchor, constant: 16),
+            metaLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            metaLabel.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+            imageView.topAnchor.constraint(equalTo: metaLabel.bottomAnchor, constant: 12),
+            imageView.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            imageView.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+            imageView.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -16),
+            minimum,
+            maximum,
+            previewMessage.centerYAnchor.constraint(equalTo: imageView.centerYAnchor),
+            previewMessage.leadingAnchor.constraint(equalTo: imageView.leadingAnchor),
+            previewMessage.trailingAnchor.constraint(equalTo: imageView.trailingAnchor)
         ])
+        setAspectRatio(0.75)
         actionBar.makeLayout(in: self)
+    }
+
+    private static func makeDivider() -> UIView {
+        let divider = UIView()
+        divider.backgroundColor = UIColor(resource: .homeOutline)
+        divider.translatesAutoresizingMaskIntoConstraints = false
+        divider.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        return divider
+    }
+
+    private func setAspectRatio(_ ratio: CGFloat) {
+        aspectConstraint?.isActive = false
+        let constraint = imageView.heightAnchor.constraint(equalTo: imageView.widthAnchor, multiplier: ratio)
+        constraint.priority = .defaultHigh
+        constraint.isActive = true
+        aspectConstraint = constraint
+    }
+
+    private func updatePhotoButton() {
+        photoButton.isEnabled = !isBusy && !isSavingToPhotos
+        photoButton.configuration?.showsActivityIndicator = isSavingToPhotos
     }
 
     private func bindActions() {
         closeButton.addAction(UIAction { [weak self] _ in self?.send(.close) }, for: .touchUpInside)
         saveButton.addAction(UIAction { [weak self] _ in self?.send(.save) }, for: .touchUpInside)
+        photoButton.addAction(UIAction { [weak self] _ in self?.send(.saveToPhotos) }, for: .touchUpInside)
         nameField.addAction(
             UIAction { [weak self] _ in
                 guard let self else { return }
@@ -286,7 +281,7 @@ final class TextDetailView: UIView, TextDetailViewable {
         nameField.addAction(
             UIAction { [weak self] _ in
                 guard let self else { return }
-                scrollToVisible(nameRow)
+                scrollView.scrollRectToVisible(nameRow.convert(nameRow.bounds, to: scrollView), animated: true)
             },
             for: .editingDidBegin
         )
@@ -298,12 +293,11 @@ final class TextDetailView: UIView, TextDetailViewable {
             for: .valueChanged
         )
         nameField.delegate = self
-        memoView.delegate = self
     }
 
     private func bindTraitChanges() {
         updateBorder()
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: TextDetailView, _) in
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: ImageDetailView, _) in
             view.updateBorder()
         }
     }
@@ -311,28 +305,11 @@ final class TextDetailView: UIView, TextDetailViewable {
     private func updateBorder() {
         card.layer.borderColor = UIColor(resource: .homeOutline).resolvedColor(with: traitCollection).cgColor
     }
-
-    /// 키보드에 가려지지 않도록 편집 중인 영역을 스크롤해 보이게 합니다.
-    private func scrollToVisible(_ target: UIView) {
-        scrollView.scrollRectToVisible(target.convert(target.bounds, to: scrollView), animated: true)
-    }
 }
 
-extension TextDetailView: UITextFieldDelegate {
+extension ImageDetailView: UITextFieldDelegate {
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         textField.resignFirstResponder()
         return true
-    }
-}
-
-extension TextDetailView: UITextViewDelegate {
-    func textViewDidBeginEditing(_ textView: UITextView) {
-        scrollToVisible(memoRow)
-    }
-
-    func textViewDidChange(_ textView: UITextView) {
-        memoPlaceholder.isHidden = !textView.text.isEmpty
-        send(.changeMemo(textView.text))
-        scrollToVisible(memoRow)
     }
 }

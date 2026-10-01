@@ -31,7 +31,7 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
     }
 
     private let makeSearchView: @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewable
-    private let makeTextDetailViewController: @MainActor (Clip) -> UIViewController
+    private let makeDetailViewController: @MainActor (Clip) -> UIViewController
 
     private var displays = [CardDisplay]()
     private var renderedContent: SearchContent?
@@ -50,10 +50,10 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
     init(
         reactor: SearchReactor,
         makeSearchView: @escaping @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewable,
-        makeTextDetailViewController: @escaping @MainActor (Clip) -> UIViewController
+        makeDetailViewController: @escaping @MainActor (Clip) -> UIViewController
     ) {
         self.makeSearchView = makeSearchView
-        self.makeTextDetailViewController = makeTextDetailViewController
+        self.makeDetailViewController = makeDetailViewController
         super.init(reactor: reactor)
     }
 
@@ -323,10 +323,10 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
     ) {
         let clip = displays[indexPath.item].result.clip
         // 이미 상세 화면이 떠 있으면 다시 열지 않습니다.
-        guard case .text = clip.content, presentedViewController == nil else { return }
+        guard presentedViewController == nil else { return }
         // 검색 입력의 키보드가 시트 위에 남지 않게 내립니다.
         searchView.endEditing(true)
-        present(makeTextDetailViewController(clip), animated: true)
+        present(makeDetailViewController(clip), animated: true)
     }
 
     func collectionView(

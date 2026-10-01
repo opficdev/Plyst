@@ -18,6 +18,7 @@ final class HomeSceneComposition {
     private let storage: SQLiteClipStorageService
     private let images: ClipImageService
     private let clipboard: ClipClipboardService
+    private let photos: ClipPhotoLibraryService
 
     init() throws {
         var directory = try FileManager.default.url(
@@ -39,19 +40,34 @@ final class HomeSceneComposition {
         self.storage = storage
         self.images = images
         self.clipboard = clipboard
+        photos = ClipPhotoLibraryService(storage: storage, images: images)
     }
 
     func makeRootViewController() -> UIViewController {
-        // 상세 화면은 같은 저장소와 클립보드 서비스를 공유합니다.
-        let makeTextDetail: @MainActor (Clip) -> UIViewController = { [storage, clipboard] clip in
-            TextDetailViewController(
-                reactor: TextDetailReactor(
-                    clip: clip,
-                    storage: storage,
-                    clipboard: clipboard
-                ),
-                makeTextDetailView: { TextDetailView(frame: .zero, send: $0) }
-            )
+        // 상세 화면은 같은 저장소와 서비스 인스턴스를 공유합니다.
+        let makeDetail: @MainActor (Clip) -> UIViewController = { [storage, clipboard, images, photos] clip in
+            switch clip.content {
+            case .text:
+                TextDetailViewController(
+                    reactor: TextDetailReactor(
+                        clip: clip,
+                        storage: storage,
+                        clipboard: clipboard
+                    ),
+                    makeTextDetailView: { TextDetailView(frame: .zero, send: $0) }
+                )
+            case .image:
+                ImageDetailViewController(
+                    reactor: ImageDetailReactor(
+                        clip: clip,
+                        storage: storage,
+                        clipboard: clipboard,
+                        images: images,
+                        photos: photos
+                    ),
+                    makeImageDetailView: { ImageDetailView(frame: .zero, send: $0) }
+                )
+            }
         }
         let reactor = HomeReactor(
             storage: storage,
@@ -62,7 +78,7 @@ final class HomeSceneComposition {
         let controller = HomeViewController(
             reactor: reactor,
             makeHomeView: { HomeView(frame: .zero, send: $0) },
-            makeSearchViewController: { [storage, clipboard, images, makeTextDetail] in
+            makeSearchViewController: { [storage, clipboard, images, makeDetail] in
                 SearchViewController(
                     reactor: SearchReactor(
                         storage: storage,
@@ -71,10 +87,10 @@ final class HomeSceneComposition {
                         images: images
                     ),
                     makeSearchView: { SearchView(frame: .zero, send: $0) },
-                    makeTextDetailViewController: makeTextDetail
+                    makeDetailViewController: makeDetail
                 )
             },
-            makeTextDetailViewController: makeTextDetail
+            makeDetailViewController: makeDetail
         )
         let navigation = UINavigationController(rootViewController: controller)
         navigation.setNavigationBarHidden(true, animated: false)

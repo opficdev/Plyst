@@ -1,5 +1,5 @@
 //
-//  TextDetailActionBarView.swift
+//  ClipDetailActionBarView.swift
 //  Plyst
 //
 //  Created by opfic on 10/1/26.
@@ -9,15 +9,20 @@ import UIKit
 
 /// 화면 하단에 고정되는 삭제와 다시 복사 버튼 바입니다.
 /// 하단 가장자리는 키보드가 올라오면 키보드 위로 따라 올라갑니다.
-final class TextDetailActionBarView: UIView {
+final class ClipDetailActionBarView: UIView {
     private let line = UIView()
     private let stack = UIStackView()
     private let deleteButton = UIButton(type: .system)
     private let copyButton = UIButton(type: .system)
-    private let send: @MainActor (TextDetailViewAction) -> Void
+    private let copy: @MainActor () -> Void
+    private let delete: @MainActor () -> Void
 
-    init(send: @escaping @MainActor (TextDetailViewAction) -> Void) {
-        self.send = send
+    init(
+        copy: @escaping @MainActor () -> Void,
+        delete: @escaping @MainActor () -> Void
+    ) {
+        self.copy = copy
+        self.delete = delete
         super.init(frame: .zero)
         configureAppearance()
         makeHierarchy()
@@ -109,7 +114,7 @@ final class TextDetailActionBarView: UIView {
     }
 
     private func bindActions() {
-        deleteButton.addAction(UIAction { [weak self] _ in self?.send(.delete) }, for: .touchUpInside)
-        copyButton.addAction(UIAction { [weak self] _ in self?.send(.copy) }, for: .touchUpInside)
+        deleteButton.addAction(UIAction { [weak self] _ in self?.delete() }, for: .touchUpInside)
+        copyButton.addAction(UIAction { [weak self] _ in self?.copy() }, for: .touchUpInside)
     }
 }
