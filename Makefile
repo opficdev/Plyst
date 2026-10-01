@@ -5,6 +5,9 @@ DESTINATION ?= generic/platform=iOS Simulator
 TEST_DEVICE_ID ?= $(shell xcrun simctl list devices available iPhone | grep -Eo '[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}' | tail -1)
 TEST_DESTINATION ?= platform=iOS Simulator,id=$(TEST_DEVICE_ID)
 RESULT_BUNDLE_PATH ?= /tmp/plyst-test-results.xcresult
+TEST_FLAGS ?= -test-timeouts-enabled YES \
+	-default-test-execution-time-allowance 60 \
+	-maximum-test-execution-time-allowance 120
 DERIVED_DATA_PATH ?= /tmp/plyst-derived-data
 XCODEBUILD_FLAGS ?=
 
@@ -39,7 +42,7 @@ test-device-id:
 
 test-without-building:
 	rm -rf "$(RESULT_BUNDLE_PATH)"
-	xcodebuild $(XCODEBUILD_FLAGS) \
+	xcodebuild $(XCODEBUILD_FLAGS) $(TEST_FLAGS) \
 		-project "$(PROJECT)" \
 		-scheme "$(SCHEME)" \
 		-configuration "$(CONFIGURATION)" \
