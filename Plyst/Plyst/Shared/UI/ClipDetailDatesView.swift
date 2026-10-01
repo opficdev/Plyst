@@ -18,6 +18,7 @@ final class ClipDetailDatesView: UIView {
         configureAppearance()
         makeHierarchy()
         makeLayout()
+        bindTraitChanges()
     }
 
     @available(*, unavailable)
@@ -61,6 +62,7 @@ final class ClipDetailDatesView: UIView {
         // 칸 사이의 1pt 간격으로 구분선을 표현합니다.
         backgroundColor = UIColor(resource: .homeOutline)
         layer.cornerRadius = 14
+        layer.borderWidth = 1
         clipsToBounds = true
         stack.axis = .horizontal
         stack.distribution = .fillEqually
@@ -81,10 +83,21 @@ final class ClipDetailDatesView: UIView {
     private func makeLayout() {
         stack.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: topAnchor, constant: 1),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -1),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 1),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -1)
+            stack.topAnchor.constraint(equalTo: topAnchor),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor)
         ])
+    }
+
+    private func bindTraitChanges() {
+        updateBorder()
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: ClipDetailDatesView, _) in
+            view.updateBorder()
+        }
+    }
+
+    private func updateBorder() {
+        layer.borderColor = UIColor(resource: .homeOutline).resolvedColor(with: traitCollection).cgColor
     }
 }
