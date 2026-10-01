@@ -33,6 +33,7 @@ final class HomeView: UIView, HomeViewable {
     private let titleHeader = HomeTitleHeaderView(frame: .zero)
     private let filterBar: HomeFilterBarView
     private let headerContainer = UIView()
+    private let topFade = EdgeFadeView(edge: .top, color: UIColor(resource: .homeCanvas))
     private let contentArea = UILayoutGuide()
     private let emptyState = HomeEmptyStateView()
     private let saveBar = UIView()
@@ -40,7 +41,6 @@ final class HomeView: UIView, HomeViewable {
     private let lock = UIImageView(image: UIImage(systemName: "lock.fill"))
     private let privacy = UILabel()
     private lazy var privacyRow = UIStackView(arrangedSubviews: [lock, privacy])
-    private let toast = ToastView(textColor: UIColor(resource: .homeBottomText))
     private var headerHeight = CGFloat.zero
     private var hiddenHeaderHeight = CGFloat.zero
     private var scrollViewportSize = CGSize.zero
@@ -180,22 +180,6 @@ final class HomeView: UIView, HomeViewable {
         emptyState.isHidden = true
     }
 
-    func showFeedback(
-        message: String,
-        isSuccess: Bool
-    ) {
-        toast.show(
-            message: message,
-            backgroundColor: isSuccess
-                ? UIColor(resource: .homeFeedbackSuccess)
-                : UIColor(resource: .homeFeedbackFailure)
-        )
-    }
-
-    func hideFeedback() {
-        toast.hide()
-    }
-
     private func updateScrollGeometry() {
         guard 0 < bounds.width, 0 < bounds.height else { return }
         let height = headerContainer.bounds.height
@@ -306,14 +290,16 @@ final class HomeView: UIView, HomeViewable {
         addSubview(headerContainer)
         headerContainer.addSubview(titleHeader)
         headerContainer.addSubview(filterBar)
+        // 헤더가 위로 숨겨질 때도 함께 가려지도록 헤더보다 앞에 둡니다.
+        addSubview(topFade)
         addSubview(saveBar)
         saveBar.addSubview(saveButton)
         saveBar.addSubview(privacyRow)
-        addSubview(toast)
     }
 
     private func makeLayout() {
         headerContainer.translatesAutoresizingMaskIntoConstraints = false
+        topFade.translatesAutoresizingMaskIntoConstraints = false
         titleHeader.translatesAutoresizingMaskIntoConstraints = false
         filterBar.translatesAutoresizingMaskIntoConstraints = false
         collectionView.translatesAutoresizingMaskIntoConstraints = false
@@ -322,7 +308,6 @@ final class HomeView: UIView, HomeViewable {
         saveButton.translatesAutoresizingMaskIntoConstraints = false
         lock.translatesAutoresizingMaskIntoConstraints = false
         privacyRow.translatesAutoresizingMaskIntoConstraints = false
-        toast.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: topAnchor),
@@ -361,10 +346,10 @@ final class HomeView: UIView, HomeViewable {
             emptyState.centerYAnchor.constraint(equalTo: contentArea.centerYAnchor, constant: 24),
             emptyState.leadingAnchor.constraint(greaterThanOrEqualTo: collectionView.leadingAnchor, constant: 40),
             emptyState.trailingAnchor.constraint(lessThanOrEqualTo: collectionView.trailingAnchor, constant: -40),
-            toast.centerXAnchor.constraint(equalTo: centerXAnchor),
-            toast.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 12),
-            toast.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 20),
-            toast.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20)
+            topFade.topAnchor.constraint(equalTo: topAnchor),
+            topFade.leadingAnchor.constraint(equalTo: leadingAnchor),
+            topFade.trailingAnchor.constraint(equalTo: trailingAnchor),
+            topFade.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor)
         ])
     }
 

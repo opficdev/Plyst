@@ -25,12 +25,13 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
 
     private lazy var searchView = makeSearchView(makeSend())
     private var collectionView: UICollectionView { searchView.collectionView }
-    private let thumbnailCache = NSCache<NSString, UIImage>()
+    private let thumbnails = ThumbnailImageCache(countLimit: 48)
     private lazy var timeline = HomeTimelineScheduler { [weak self] now in
         self?.reactor.action.onNext(.timeChanged(now))
     }
 
     private let makeSearchView: @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewable
+    private let makeTextDetailViewController: @MainActor (Clip) -> UIViewController
 
     private var displays = [CardDisplay]()
     private var renderedContent: SearchContent?
@@ -38,15 +39,21 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
     private var renderedClips = [Clip]()
     private var renderedFilter: HomeFilter?
     private var renderedRecent: RecentDisplay?
-    private var presentedFeedbackID: UUID?
-    private var feedbackTask: Task<Void, Never>?
+    private lazy var feedbackPresenter = FeedbackPresenter(
+        host: searchView,
+        topAnchor: searchView.safeAreaLayoutGuide.topAnchor,
+        topInset: 12,
+        dismiss: { [weak self] in self?.reactor.action.onNext(.dismissFeedback($0)) }
+    )
     private var didFocusSearchField = false
 
     init(
         reactor: SearchReactor,
-        makeSearchView: @escaping @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewable
+        makeSearchView: @escaping @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewable,
+        makeTextDetailViewController: @escaping @MainActor (Clip) -> UIViewController
     ) {
         self.makeSearchView = makeSearchView
+        self.makeTextDetailViewController = makeTextDetailViewController
         super.init(reactor: reactor)
     }
 
@@ -86,7 +93,6 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        thumbnailCache.countLimit = 48
         navigationController?.setNavigationBarHidden(true, animated: false)
         reactor.action.onNext(.viewDidLoad)
     }
@@ -103,10 +109,6 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         timeline.disappear()
-    }
-
-    deinit {
-        feedbackTask?.cancel()
     }
 
     override func render(state: SearchReactor.State) {
@@ -139,7 +141,7 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
         renderRecent(state: state)
         renderMode(state: state, content: content)
         updateVisibleThumbnails(state: state)
-        showFeedback(state.feedback)
+        feedbackPresenter.update(state.feedback)
     }
 
     private func renderRecent(state: SearchReactor.State) {
@@ -215,44 +217,13 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
         }
     }
 
-    private func showFeedback(_ feedback: SearchReactor.Feedback?) {
-        guard let feedback else {
-            searchView.hideFeedback()
-            presentedFeedbackID = nil
-            return
-        }
-        guard presentedFeedbackID != feedback.id else { return }
-        presentedFeedbackID = feedback.id
-        searchView.showFeedback(
-            message: feedback.message,
-            isSuccess: feedback.isSuccess
-        )
-        feedbackTask?.cancel()
-        feedbackTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(2))
-            guard !Task.isCancelled else { return }
-            self?.reactor.action.onNext(.dismissFeedback(feedback.id))
-        }
-    }
-
     private func updateVisibleThumbnails(state: SearchReactor.State) {
         for cell in collectionView.visibleCells {
             guard let cell = cell as? any HomeImageCellable,
                   let key = cell.representedKey,
-                  let image = thumbnail(for: key, state: state) else { continue }
+                  let image = thumbnails.image(for: key, data: state.thumbnails[key]) else { continue }
             cell.setThumbnail(image)
         }
-    }
-
-    private func thumbnail(
-        for key: HomeThumbnailKey,
-        state: SearchReactor.State
-    ) -> UIImage? {
-        let cacheKey = "\(key.fileID.uuidString)-\(key.maximumPixelDimension)" as NSString
-        if let image = thumbnailCache.object(forKey: cacheKey) { return image }
-        guard let data = state.thumbnails[key], let image = UIImage(data: data) else { return nil }
-        thumbnailCache.setObject(image, forKey: cacheKey)
-        return image
     }
 
     private func thumbnailKey(
@@ -323,7 +294,7 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
                     with: clip,
                     now: reactor.currentState.now,
                     key: key,
-                    thumbnail: thumbnail(for: key, state: reactor.currentState),
+                    thumbnail: thumbnails.image(for: key, data: reactor.currentState.thumbnails[key]),
                     name: display.name,
                     onCopy: copy
                 )
@@ -344,6 +315,18 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
         ) as? any HomeSectionHeaderViewable else { preconditionFailure("\(searchView.sectionHeaderType) registration mismatch") }
         header.configure(title: headerTitle())
         return header
+    }
+
+    func collectionView(
+        _ collectionView: UICollectionView,
+        didSelectItemAt indexPath: IndexPath
+    ) {
+        let clip = displays[indexPath.item].result.clip
+        // 이미 상세 화면이 떠 있으면 다시 열지 않습니다.
+        guard case .text = clip.content, presentedViewController == nil else { return }
+        // 검색 입력의 키보드가 시트 위에 남지 않게 내립니다.
+        searchView.endEditing(true)
+        present(makeTextDetailViewController(clip), animated: true)
     }
 
     func collectionView(

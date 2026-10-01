@@ -42,6 +42,17 @@ final class HomeSceneComposition {
     }
 
     func makeRootViewController() -> UIViewController {
+        // 상세 화면은 같은 저장소와 클립보드 서비스를 공유합니다.
+        let makeTextDetail: @MainActor (Clip) -> UIViewController = { [storage, clipboard] clip in
+            TextDetailViewController(
+                reactor: TextDetailReactor(
+                    clip: clip,
+                    storage: storage,
+                    clipboard: clipboard
+                ),
+                makeTextDetailView: { TextDetailView(frame: .zero, send: $0) }
+            )
+        }
         let reactor = HomeReactor(
             storage: storage,
             clipboard: clipboard,
@@ -51,7 +62,7 @@ final class HomeSceneComposition {
         let controller = HomeViewController(
             reactor: reactor,
             makeHomeView: { HomeView(frame: .zero, send: $0) },
-            makeSearchViewController: { [storage, clipboard, images] in
+            makeSearchViewController: { [storage, clipboard, images, makeTextDetail] in
                 SearchViewController(
                     reactor: SearchReactor(
                         storage: storage,
@@ -59,9 +70,11 @@ final class HomeSceneComposition {
                         clipboard: clipboard,
                         images: images
                     ),
-                    makeSearchView: { SearchView(frame: .zero, send: $0) }
+                    makeSearchView: { SearchView(frame: .zero, send: $0) },
+                    makeTextDetailViewController: makeTextDetail
                 )
-            }
+            },
+            makeTextDetailViewController: makeTextDetail
         )
         let navigation = UINavigationController(rootViewController: controller)
         navigation.setNavigationBarHidden(true, animated: false)

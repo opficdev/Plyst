@@ -29,11 +29,4 @@ protocol HomeViewable: UIView {
     )
 
     func hideEmptyState()
-
-    func showFeedback(
-        message: String,
-        isSuccess: Bool
-    )
-
-    func hideFeedback()
 }
