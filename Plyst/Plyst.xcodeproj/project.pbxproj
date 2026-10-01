@@ -16,6 +16,7 @@
 		DFA00010306A4A9700115D10 /* StructuredQueriesSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00011306A4A9700115D10 /* StructuredQueriesSQLite */; };
 		DFA00013306A4A9700115D10 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00015306A4A9700115D10 /* GRDB */; };
 		DFA00014306A4A9700115D10 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00016306A4A9700115D10 /* GRDB */; };
+		DFC0000E306A4A9700115D10 /* PlystShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DFC00002306A4A9700115D10 /* PlystShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,11 +27,33 @@
 			remoteGlobalIDString = DFEB0A20306A4A9500115D10;
 			remoteInfo = Plyst;
 		};
+		DFC0000B306A4A9700115D10 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DFEB0A19306A4A9500115D10 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DFC00001306A4A9700115D10;
+			remoteInfo = PlystShareExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DFC0000D306A4A9700115D10 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				DFC0000E306A4A9700115D10 /* PlystShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		DFEB0A21306A4A9500115D10 /* Plyst.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Plyst.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DFEB0A37306A4A9700115D10 /* PlystTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlystTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DFC00002306A4A9700115D10 /* PlystShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PlystShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -42,6 +65,14 @@
 			);
 			target = DFEB0A20306A4A9500115D10 /* Plyst */;
 		};
+		DFC00004306A4A9700115D10 /* Exceptions for "PlystShareExtension" folder in "PlystShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				PlystShareExtension.entitlements,
+			);
+			target = DFC00001306A4A9700115D10 /* PlystShareExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -51,6 +82,14 @@
 				DFEB0A47306A4A9700115D10 /* Exceptions for "Plyst" folder in "Plyst" target */,
 			);
 			path = Plyst;
+			sourceTree = "<group>";
+		};
+		DFC00003306A4A9700115D10 /* PlystShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DFC00004306A4A9700115D10 /* Exceptions for "PlystShareExtension" folder in "PlystShareExtension" target */,
+			);
+			path = PlystShareExtension;
 			sourceTree = "<group>";
 		};
 		DFEB0A3A306A4A9700115D10 /* PlystTests */ = {
@@ -80,6 +119,11 @@
 				DFA00014306A4A9700115D10 /* GRDB in Frameworks */,
 			);
 		};
+		DFC00006306A4A9700115D10 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -87,6 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				DFEB0A23306A4A9500115D10 /* Plyst */,
+				DFC00003306A4A9700115D10 /* PlystShareExtension */,
 				DFEB0A3A306A4A9700115D10 /* PlystTests */,
 				DFEB0A22306A4A9500115D10 /* Products */,
 			);
@@ -97,6 +142,7 @@
 			children = (
 				DFEB0A21306A4A9500115D10 /* Plyst.app */,
 				DFEB0A37306A4A9700115D10 /* PlystTests.xctest */,
+				DFC00002306A4A9700115D10 /* PlystShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -111,8 +157,12 @@
 				DFEB0A1D306A4A9500115D10 /* Sources */,
 				DFEB0A1E306A4A9500115D10 /* Frameworks */,
 				DFEB0A1F306A4A9500115D10 /* Resources */,
+				DFC0000D306A4A9700115D10 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
+			);
+			dependencies = (
+				DFC0000C306A4A9700115D10 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				DFEB0A23306A4A9500115D10 /* Plyst */,
@@ -156,6 +206,28 @@
 			productReference = DFEB0A37306A4A9700115D10 /* PlystTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		DFC00001306A4A9700115D10 /* PlystShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DFC00008306A4A9700115D10 /* Build configuration list for PBXNativeTarget "PlystShareExtension" */;
+			buildPhases = (
+				DFC00005306A4A9700115D10 /* Sources */,
+				DFC00006306A4A9700115D10 /* Frameworks */,
+				DFC00007306A4A9700115D10 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				DFC00003306A4A9700115D10 /* PlystShareExtension */,
+			);
+			name = PlystShareExtension;
+			packageProductDependencies = (
+			);
+			productName = PlystShareExtension;
+			productReference = DFC00002306A4A9700115D10 /* PlystShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -172,6 +244,9 @@
 					DFEB0A36306A4A9700115D10 = {
 						CreatedOnToolsVersion = 27.0;
 						TestTargetID = DFEB0A20306A4A9500115D10;
+					};
+					DFC00001306A4A9700115D10 = {
+						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -198,6 +273,7 @@
 			targets = (
 				DFEB0A20306A4A9500115D10 /* Plyst */,
 				DFEB0A36306A4A9700115D10 /* PlystTests */,
+				DFC00001306A4A9700115D10 /* PlystShareExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -209,6 +285,11 @@
 			);
 		};
 		DFEB0A35306A4A9700115D10 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		DFC00007306A4A9700115D10 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -226,6 +307,11 @@
 			files = (
 			);
 		};
+		DFC00005306A4A9700115D10 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -233,6 +319,11 @@
 			isa = PBXTargetDependency;
 			target = DFEB0A20306A4A9500115D10 /* Plyst */;
 			targetProxy = DFEB0A38306A4A9700115D10 /* PBXContainerItemProxy */;
+		};
+		DFC0000C306A4A9700115D10 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DFC00001306A4A9700115D10 /* PlystShareExtension */;
+			targetProxy = DFC0000B306A4A9700115D10 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -488,6 +579,74 @@
 			};
 			name = Release;
 		};
+		DFC00009306A4A9700115D10 /* Debug configuration for PBXNativeTarget "PlystShareExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = PlystShareExtension/PlystShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4CPC6N38WA;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PlystShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Plyst;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = opfic.Plyst.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		DFC0000A306A4A9700115D10 /* Release configuration for PBXNativeTarget "PlystShareExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = PlystShareExtension/PlystShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4CPC6N38WA;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PlystShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Plyst;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = opfic.Plyst.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -512,6 +671,14 @@
 			buildConfigurations = (
 				DFEB0A4E306A4A9700115D10 /* Debug configuration for PBXNativeTarget "PlystTests" */,
 				DFEB0A4F306A4A9700115D10 /* Release configuration for PBXNativeTarget "PlystTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		DFC00008306A4A9700115D10 /* Build configuration list for PBXNativeTarget "PlystShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DFC00009306A4A9700115D10 /* Debug configuration for PBXNativeTarget "PlystShareExtension" */,
+				DFC0000A306A4A9700115D10 /* Release configuration for PBXNativeTarget "PlystShareExtension" */,
 			);
 			defaultConfigurationName = Release;
 		};
