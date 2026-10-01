@@ -14,7 +14,7 @@ protocol TextDetailViewable: UIView {
         text: String
     )
 
-    /// 사용자가 입력 중인 값과 같으면 대입하지 않아 커서 위치를 유지합니다.
+    /// 입력 중인 칸은 대입하지 않고 사용자의 입력을 그대로 둡니다. 입력 중이 아닐 때만 값이 다르면 대입합니다.
     func setDraft(
         name: String,
         memo: String,
