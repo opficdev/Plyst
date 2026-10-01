@@ -329,7 +329,7 @@ final class HomeView: UIView, HomeViewable {
             filterBar.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
             filterBar.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
             filterBar.heightAnchor.constraint(equalToConstant: 40),
-            filterBar.bottomAnchor.constraint(equalTo: headerContainer.bottomAnchor, constant: -12),
+            filterBar.bottomAnchor.constraint(equalTo: headerContainer.bottomAnchor, constant: -4),
             contentArea.topAnchor.constraint(equalTo: headerContainer.bottomAnchor),
             contentArea.leadingAnchor.constraint(equalTo: collectionView.leadingAnchor),
             contentArea.trailingAnchor.constraint(equalTo: collectionView.trailingAnchor),

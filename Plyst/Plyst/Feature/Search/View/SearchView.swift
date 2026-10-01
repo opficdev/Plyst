@@ -217,7 +217,6 @@ final class SearchView: UIView, SearchViewable {
         collectionView.contentInsetAdjustmentBehavior = .never
         collectionView.alwaysBounceVertical = true
         collectionView.keyboardDismissMode = .onDrag
-        collectionView.contentInset.top = 8
         collectionView.contentInset.bottom = 16
         collectionView.isHidden = true
 
@@ -283,10 +282,12 @@ final class SearchView: UIView, SearchViewable {
             fieldTrailing,
             searchField.topAnchor.constraint(equalTo: fieldContainer.topAnchor),
             searchField.bottomAnchor.constraint(equalTo: fieldContainer.bottomAnchor),
-            filterBar.topAnchor.constraint(equalTo: fieldContainer.bottomAnchor, constant: 12),
+            // 기록 화면의 필터 바와 같은 높이에 놓이도록 헤더 하단 간격(13)에서 필터 바 겹침(4)을 뺀 값이다.
+            filterBar.topAnchor.constraint(equalTo: fieldContainer.bottomAnchor, constant: 9),
             filterBar.leadingAnchor.constraint(equalTo: leadingAnchor),
             filterBar.trailingAnchor.constraint(equalTo: trailingAnchor),
             filterBar.heightAnchor.constraint(equalToConstant: 40),
+            // 기록 화면의 목록이 시작하는 헤더 하단과 같은 위치이며 최근 검색어도 같은 선에서 시작한다.
             collectionView.topAnchor.constraint(equalTo: filterBar.bottomAnchor, constant: 4),
             collectionView.leadingAnchor.constraint(equalTo: leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: trailingAnchor),

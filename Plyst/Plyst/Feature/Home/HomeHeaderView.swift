@@ -68,13 +68,13 @@ final class HomeTitleHeaderView: UIView {
             mark.heightAnchor.constraint(equalToConstant: 34),
             title.centerYAnchor.constraint(equalTo: mark.centerYAnchor),
             title.leadingAnchor.constraint(equalTo: mark.trailingAnchor, constant: 10),
-            // 버튼은 헤더 높이를 정하는 제약에 넣지 않고 마크 기준으로만 배치합니다.
             searchButton.centerYAnchor.constraint(equalTo: mark.centerYAnchor),
             searchButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
             searchButton.widthAnchor.constraint(equalToConstant: 44),
             searchButton.heightAnchor.constraint(equalToConstant: 44),
             title.trailingAnchor.constraint(lessThanOrEqualTo: searchButton.leadingAnchor, constant: -10),
-            bottomAnchor.constraint(equalTo: title.bottomAnchor, constant: 16)
+            // 폰트 높이에 따라 달라지지 않도록 검색 화면의 첫 줄과 같은 44pt 버튼 행을 기준으로 높이를 정합니다.
+            bottomAnchor.constraint(equalTo: searchButton.bottomAnchor, constant: 13)
         ])
     }
 }
