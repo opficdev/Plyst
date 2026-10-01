@@ -175,10 +175,10 @@
 				};
 			};
 			buildConfigurationList = DFEB0A1C306A4A9500115D10 /* Build configuration list for PBXProject "Plyst" */;
-			developmentRegion = en;
+			developmentRegion = ko;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
+				ko,
 				Base,
 			);
 			mainGroup = DFEB0A18306A4A9500115D10;
