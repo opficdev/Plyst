@@ -62,7 +62,6 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationController?.setNavigationBarHidden(true, animated: false)
         reactor.action.onNext(.viewDidLoad)
     }
 

@@ -93,9 +93,7 @@ final class HomeSceneComposition {
             },
             makeDetailViewController: makeDetail
         )
-        let navigation = UINavigationController(rootViewController: controller)
-        navigation.setNavigationBarHidden(true, animated: false)
-        return navigation
+        return controller
     }
 
     func startPendingCleanupRecovery() {
