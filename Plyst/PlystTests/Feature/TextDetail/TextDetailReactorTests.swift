@@ -25,7 +25,11 @@ final class TextDetailReactorTests: XCTestCase {
 
     func testSavingWithoutChangesDoesNotWriteOrEmitEvents() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
-        let clip = Clip(content: .text("원문"), name: "이름", memo: "메모")
+        let clip = Clip(
+            content: .text("원문"),
+            name: "이름",
+            memo: "메모"
+        )
         try await storage.insert(clip)
         let changes = await storage.changes()
         let collector = Task {
@@ -51,7 +55,11 @@ final class TextDetailReactorTests: XCTestCase {
     func testSavingStoresNameMemoAndPinnedTogetherAndKeepsTheRest() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let used = Date(timeIntervalSinceReferenceDate: 500)
-        let clip = Clip(content: .text("원문"), createdAt: Date(timeIntervalSinceReferenceDate: 100), lastUsedAt: used)
+        let clip = Clip(
+            content: .text("원문"),
+            createdAt: Date(timeIntervalSinceReferenceDate: 100),
+            lastUsedAt: used
+        )
         try await storage.insert(clip)
         let reactor = try makeReactor(clip: clip, storage: storage, writer: ClipboardWriterSpy())
 
@@ -74,7 +82,11 @@ final class TextDetailReactorTests: XCTestCase {
 
     func testBlankNameAndMemoAreStoredAsNil() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
-        let clip = Clip(content: .text("원문"), name: "이름", memo: "메모")
+        let clip = Clip(
+            content: .text("원문"),
+            name: "이름",
+            memo: "메모"
+        )
         try await storage.insert(clip)
         let reactor = try makeReactor(clip: clip, storage: storage, writer: ClipboardWriterSpy())
 

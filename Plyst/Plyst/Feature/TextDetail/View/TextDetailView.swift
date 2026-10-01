@@ -152,12 +152,22 @@ final class TextDetailView: UIView, TextDetailViewable {
             row.axis = .vertical
             row.spacing = 4
             row.isLayoutMarginsRelativeArrangement = true
-            row.layoutMargins = UIEdgeInsets(top: 12, left: 4, bottom: 12, right: 4)
+            row.layoutMargins = UIEdgeInsets(
+                top: 12,
+                left: 4,
+                bottom: 12,
+                right: 4
+            )
         }
         pinRow.axis = .horizontal
         pinRow.alignment = .center
         pinRow.isLayoutMarginsRelativeArrangement = true
-        pinRow.layoutMargins = UIEdgeInsets(top: 14, left: 4, bottom: 14, right: 4)
+        pinRow.layoutMargins = UIEdgeInsets(
+            top: 14,
+            left: 4,
+            bottom: 14,
+            right: 4
+        )
         pinLabel.text = "고정"
         pinLabel.font = .systemFont(ofSize: 16, weight: .medium)
         pinLabel.textColor = UIColor(resource: .homePrimaryText)
