@@ -33,6 +33,7 @@ final class HomeView: UIView, HomeViewable {
     private let titleHeader = HomeTitleHeaderView(frame: .zero)
     private let filterBar: HomeFilterBarView
     private let headerContainer = UIView()
+    private let topFade = EdgeFadeView(edge: .top, color: UIColor(resource: .homeCanvas))
     private let contentArea = UILayoutGuide()
     private let emptyState = HomeEmptyStateView()
     private let saveBar = UIView()
@@ -289,6 +290,8 @@ final class HomeView: UIView, HomeViewable {
         addSubview(headerContainer)
         headerContainer.addSubview(titleHeader)
         headerContainer.addSubview(filterBar)
+        // 헤더가 위로 숨겨질 때도 함께 가려지도록 헤더보다 앞에 둡니다.
+        addSubview(topFade)
         addSubview(saveBar)
         saveBar.addSubview(saveButton)
         saveBar.addSubview(privacyRow)
@@ -296,6 +299,7 @@ final class HomeView: UIView, HomeViewable {
 
     private func makeLayout() {
         headerContainer.translatesAutoresizingMaskIntoConstraints = false
+        topFade.translatesAutoresizingMaskIntoConstraints = false
         titleHeader.translatesAutoresizingMaskIntoConstraints = false
         filterBar.translatesAutoresizingMaskIntoConstraints = false
         collectionView.translatesAutoresizingMaskIntoConstraints = false
@@ -341,7 +345,11 @@ final class HomeView: UIView, HomeViewable {
             emptyState.centerXAnchor.constraint(equalTo: collectionView.centerXAnchor),
             emptyState.centerYAnchor.constraint(equalTo: contentArea.centerYAnchor, constant: 24),
             emptyState.leadingAnchor.constraint(greaterThanOrEqualTo: collectionView.leadingAnchor, constant: 40),
-            emptyState.trailingAnchor.constraint(lessThanOrEqualTo: collectionView.trailingAnchor, constant: -40)
+            emptyState.trailingAnchor.constraint(lessThanOrEqualTo: collectionView.trailingAnchor, constant: -40),
+            topFade.topAnchor.constraint(equalTo: topAnchor),
+            topFade.leadingAnchor.constraint(equalTo: leadingAnchor),
+            topFade.trailingAnchor.constraint(equalTo: trailingAnchor),
+            topFade.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor)
         ])
     }
 
