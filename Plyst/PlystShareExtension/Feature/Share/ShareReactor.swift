@@ -8,7 +8,7 @@
 import ReactorKit
 import RxSwift
 
-/// 공유 항목을 텍스트 클립으로 저장하는 흐름을 관리합니다.
+/// 공유 항목을 클립으로 저장하는 흐름을 관리합니다.
 final class ShareReactor: Reactorable {
     enum Action: Sendable {
         /// 처음 저장과 다시 시도에 함께 사용합니다.
@@ -51,7 +51,7 @@ final class ShareReactor: Reactorable {
                 return true
             }
             let effect = ReactorEffect.task {
-                try await service.saveText(item)
+                try await service.save(item)
             }
             .map { Mutation.saveFinished($0) }
             .catch { _ in .just(.saveFailed) }

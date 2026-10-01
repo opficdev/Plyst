@@ -28,7 +28,7 @@ final class ClipShareServiceTests: XCTestCase {
         let text = " \n한글 'text'\t🙂 "
         let item = makeItem(providers: [NSItemProvider(object: text as NSString)], title: "  공유 제목 \n")
 
-        let result = try await ClipShareService(storage: storage).saveText(item)
+        let result = try await makeService(storage: storage).save(item)
 
         let clip = try savedClip(result)
         XCTAssertEqual(clip.content, .text(text))
@@ -44,7 +44,7 @@ final class ClipShareServiceTests: XCTestCase {
         let original = "https://example.com/a%20b?query=value#section"
         let item = makeItem(providers: [NSItemProvider(object: try XCTUnwrap(URL(string: original)) as NSURL)])
 
-        let result = try await ClipShareService(storage: storage).saveText(item)
+        let result = try await makeService(storage: storage).save(item)
 
         let clip = try savedClip(result)
         XCTAssertEqual(clip.content, .text(original))
@@ -58,7 +58,7 @@ final class ClipShareServiceTests: XCTestCase {
         let provider = NSItemProvider(item: text as NSString, typeIdentifier: UTType.plainText.identifier)
         let item = makeItem(providers: [provider])
 
-        let result = try await ClipShareService(storage: storage).saveText(item)
+        let result = try await makeService(storage: storage).save(item)
 
         XCTAssertEqual(try savedClip(result).content, .text(text))
     }
@@ -70,7 +70,7 @@ final class ClipShareServiceTests: XCTestCase {
         let provider = NSItemProvider(item: url as NSURL, typeIdentifier: UTType.url.identifier)
         let item = makeItem(providers: [provider])
 
-        let result = try await ClipShareService(storage: storage).saveText(item)
+        let result = try await makeService(storage: storage).save(item)
 
         XCTAssertEqual(try savedClip(result).content, .text(url.absoluteString))
     }
@@ -81,7 +81,7 @@ final class ClipShareServiceTests: XCTestCase {
         provider.registerObject(try XCTUnwrap(URL(string: "https://example.com")) as NSURL, visibility: .all)
         let item = makeItem(providers: [provider])
 
-        let result = try await ClipShareService(storage: storage).saveText(item)
+        let result = try await makeService(storage: storage).save(item)
 
         XCTAssertEqual(try savedClip(result).content, .text("페이지 제목"))
     }
@@ -89,12 +89,12 @@ final class ClipShareServiceTests: XCTestCase {
     func testOnlyFirstSupportedProviderIsSaved() async throws {
         let storage = try makeStorage()
         let item = makeItem(providers: [
-            NSItemProvider(object: UIImage()),
+            makeUnsupportedProvider(),
             NSItemProvider(object: "첫 텍스트" as NSString),
             NSItemProvider(object: "둘째 텍스트" as NSString)
         ])
 
-        let result = try await ClipShareService(storage: storage).saveText(item)
+        let result = try await makeService(storage: storage).save(item)
 
         XCTAssertEqual(try savedClip(result).content, .text("첫 텍스트"))
         let stored = try await storage.fetchAll(order: .createdAt)
@@ -103,10 +103,10 @@ final class ClipShareServiceTests: XCTestCase {
 
     func testMissingOrUnsupportedAttachmentsReturnEmptyWithoutRecord() async throws {
         let storage = try makeStorage()
-        let service = ClipShareService(storage: storage)
+        let service = try makeService(storage: storage)
 
-        let missing = try await service.saveText(ClipShareItem(item: nil))
-        let unsupported = try await service.saveText(makeItem(providers: [NSItemProvider(object: UIImage())]))
+        let missing = try await service.save(ClipShareItem(item: nil))
+        let unsupported = try await service.save(makeItem(providers: [makeUnsupportedProvider()]))
 
         XCTAssertEqual(missing, .empty)
         XCTAssertEqual(unsupported, .empty)
@@ -118,7 +118,7 @@ final class ClipShareServiceTests: XCTestCase {
         let storage = try makeStorage()
         let item = makeItem(providers: [NSItemProvider(object: " \n\t " as NSString)])
 
-        let result = try await ClipShareService(storage: storage).saveText(item)
+        let result = try await makeService(storage: storage).save(item)
 
         XCTAssertEqual(result, .empty)
         let stored = try await storage.fetchAll(order: .createdAt)
@@ -129,7 +129,7 @@ final class ClipShareServiceTests: XCTestCase {
         let storage = try makeStorage()
         let item = makeItem(providers: [NSItemProvider(object: "본문" as NSString)], title: " \n ")
 
-        let result = try await ClipShareService(storage: storage).saveText(item)
+        let result = try await makeService(storage: storage).save(item)
 
         XCTAssertNil(try savedClip(result).name)
     }
@@ -142,10 +142,10 @@ final class ClipShareServiceTests: XCTestCase {
             return nil
         }
         let item = makeItem(providers: [provider])
-        let service = ClipShareService(storage: storage)
+        let service = try makeService(storage: storage)
 
-        let first = try await service.saveText(item)
-        let second = try await service.saveText(item)
+        let first = try await service.save(item)
+        let second = try await service.save(item)
 
         XCTAssertEqual(first, .loadFailed)
         XCTAssertEqual(second, .loadFailed)
@@ -162,7 +162,7 @@ final class ClipShareServiceTests: XCTestCase {
         let item = makeItem(providers: [NSItemProvider(object: "저장 실패" as NSString)])
 
         do {
-            _ = try await ClipShareService(storage: spy).saveText(item)
+            _ = try await makeService(storage: spy).save(item)
             XCTFail("저장소 오류 전파 누락")
         } catch {
             XCTAssertEqual(error as? ClipStorageError, .writeFailed)
@@ -175,10 +175,10 @@ final class ClipShareServiceTests: XCTestCase {
     func testCancelledTaskThrowsCancellationWithoutRecord() async throws {
         let storage = try makeStorage()
         let item = makeItem(providers: [NSItemProvider(object: "취소 전 텍스트" as NSString)])
-        let service = ClipShareService(storage: storage)
+        let service = try makeService(storage: storage)
 
         let task = Task {
-            try await service.saveText(item)
+            try await service.save(item)
         }
         task.cancel()
 
@@ -192,8 +192,19 @@ final class ClipShareServiceTests: XCTestCase {
         XCTAssertTrue(stored.isEmpty)
     }
 
+    private var imagesDirectory: URL { directory.appendingPathComponent("images", isDirectory: true) }
+
     private func makeStorage() throws -> SQLiteClipStorageService {
         try SQLiteClipStorageService(databaseURL: url)
+    }
+
+    private func makeService(storage: any ClipStorageService) throws -> ClipShareService {
+        let files = try ClipImageFileStore(rootURL: imagesDirectory)
+        return ClipShareService(storage: storage, images: ClipImageService(storage: storage, files: files))
+    }
+
+    private func makeUnsupportedProvider() -> NSItemProvider {
+        NSItemProvider(item: NSNumber(value: 1), typeIdentifier: UTType.data.identifier)
     }
 
     private func makeItem(

@@ -6,20 +6,43 @@
 //
 
 import Foundation
+import os
 import UniformTypeIdentifiers
 
-/// 공유 시트로 받은 텍스트나 URL을 텍스트 클립으로 저장합니다. 이미지와 여러 항목은 다루지 않습니다.
+/// 공유 시트로 받은 항목을 클립으로 저장합니다. 여러 항목은 다루지 않습니다.
 ///
+/// 지원하는 첫 첨부가 이미지 형식을 가지면 변환 없이 원본 바이트를 이름 없는 이미지 클립으로 저장합니다.
+/// 그 외에는 텍스트나 URL을 텍스트 클립으로 저장합니다.
 /// 저장을 시도할 때마다 첨부를 다시 읽으므로 읽기 실패 후에도 같은 항목으로 다시 시도할 수 있습니다.
-/// 읽기나 검증에 실패하면 저장소에 쓰지 않습니다. 저장소 오류와 CancellationError는 그대로 전파합니다.
+/// 읽기에 실패하면 저장소에 쓰지 않습니다. 이미지 검증 오류와 저장소 오류와 CancellationError는 그대로 전파합니다.
 struct ClipShareService: Sendable {
     private let storage: any ClipStorageService
+    private let images: ClipImageService
 
-    init(storage: any ClipStorageService) {
+    init(
+        storage: any ClipStorageService,
+        images: ClipImageService
+    ) {
         self.storage = storage
+        self.images = images
     }
 
-    func saveText(_ item: ClipShareItem) async throws -> ClipShareSaveResult {
+    func save(_ item: ClipShareItem) async throws -> ClipShareSaveResult {
+        let data: Data?
+        do {
+            data = try await Self.loadImageData(from: item)
+        } catch {
+            try Task.checkCancellation()
+            return .loadFailed
+        }
+        guard let data else { return try await saveText(item) }
+        // 저장이 시작된 뒤에는 취소를 다시 확인하지 않습니다.
+        try Task.checkCancellation()
+        let result = try await images.saveImage(data)
+        return .saved(result.value)
+    }
+
+    private func saveText(_ item: ClipShareItem) async throws -> ClipShareSaveResult {
         let text: String?
         do {
             text = try await Self.loadText(from: item)
@@ -33,6 +56,48 @@ struct ClipShareService: Sendable {
         let clip = Clip(content: .text(text), name: item.title)
         try await storage.insert(clip)
         return .saved(clip)
+    }
+
+    /// 텍스트와 URL과 이미지 중 지원하는 첫 첨부만 확인합니다.
+    /// 그 첨부가 이미지 형식을 가지면 URL이나 텍스트 형식이 함께 있어도 등록된 첫 이미지 형식의 원본 데이터를 읽습니다.
+    /// 이미지 형식이 없으면 nil이며 텍스트 경로가 이어서 처리합니다.
+    @MainActor
+    private static func loadImageData(from item: ClipShareItem) async throws -> Data? {
+        guard let provider = item.providers.first(where: {
+            $0.hasItemConformingToTypeIdentifier(UTType.image.identifier)
+                || $0.hasItemConformingToTypeIdentifier(UTType.plainText.identifier)
+                || $0.hasItemConformingToTypeIdentifier(UTType.url.identifier)
+        }),
+            let typeIdentifier = provider.registeredTypeIdentifiers.first(where: {
+                UTType($0)?.conforms(to: .image) == true
+            }) else { return nil }
+        return try await loadData(from: provider, typeIdentifier: typeIdentifier)
+    }
+
+    /// 완료 핸들러에서만 continuation을 재개하므로 정확히 한 번 재개합니다.
+    /// 작업을 취소하면 Progress를 취소해 느린 로드를 멈추고 완료 핸들러가 오류를 전달합니다.
+    @MainActor
+    private static func loadData(
+        from provider: NSItemProvider,
+        typeIdentifier: String
+    ) async throws -> Data {
+        let progress = OSAllocatedUnfairLock<Progress?>(initialState: nil)
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let loading = provider.loadDataRepresentation(forTypeIdentifier: typeIdentifier) { data, error in
+                    if let data {
+                        continuation.resume(returning: data)
+                    } else {
+                        continuation.resume(throwing: error ?? CocoaError(.fileReadUnknown))
+                    }
+                }
+                progress.withLock { $0 = loading }
+                // Progress를 보관하기 전에 취소된 경우를 놓치지 않습니다.
+                if Task.isCancelled { loading.cancel() }
+            }
+        } onCancel: {
+            progress.withLock { $0 }?.cancel()
+        }
     }
 
     /// 지원하는 첫 첨부만 읽습니다. 같은 첨부에서는 텍스트를 우선하고 공백뿐이면 URL로 대체합니다.

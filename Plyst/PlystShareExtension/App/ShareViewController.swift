@@ -50,8 +50,12 @@ final class ShareViewController: UIViewController {
             let storage = try SQLiteClipStorageService(
                 databaseURL: directory.containerURL.appendingPathComponent("ShareInbox.sqlite")
             )
+            let files = try ClipImageFileStore(
+                rootURL: directory.containerURL.appendingPathComponent("ShareInboxImages", isDirectory: true)
+            )
+            let images = ClipImageService(storage: storage, files: files)
             let item = ClipShareItem(item: extensionContext?.inputItems.first as? NSExtensionItem)
-            bind(ShareReactor(item: item, service: ClipShareService(storage: storage)))
+            bind(ShareReactor(item: item, service: ClipShareService(storage: storage, images: images)))
         } catch {
             Self.logger.error("공유 저장소 준비 실패: \(String(describing: type(of: error)), privacy: .public)")
             statusView.setStatus(.failed)
