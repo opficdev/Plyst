@@ -12,6 +12,9 @@ import UniformTypeIdentifiers
 
 /// 주입한 전용 루트에서 원본 바이트를 관리합니다. 같은 루트의 변경은 ClipImageService 하나가 조율해야 합니다.
 struct ClipImageFileStore: Sendable {
+    /// 저장 전 검증에서 축소 디코딩하는 긴 변의 최대 픽셀 수입니다. 검증이 원본 해상도 비트맵을 만들지 않게 합니다.
+    private static let validationPixelDimension = 64
+
     private let root: URL
 
     init(rootURL: URL) throws {
@@ -191,16 +194,25 @@ struct ClipImageFileStore: Sendable {
         if type == UTType.gif.identifier, data.last != 0x3B { throw ClipImageFileError.invalidImage }
         let count = CGImageSourceGetCount(source)
         guard 0 < count else { throw ClipImageFileError.invalidImage }
+        // 원본 해상도 비트맵을 만들지 않도록 크기는 속성으로 읽고 무결성은 축소 디코딩으로 확인합니다.
+        let validationOptions = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: Self.validationPixelDimension
+        ] as CFDictionary
         var size = (width: 0, height: 0)
         for index in 0..<count {
             try Task.checkCancellation()
             // 프레임마다 즉시 디코딩하고 캐시를 해제하여 모든 프레임의 픽셀을 동시에 보관하지 않습니다.
             let dimensions = try autoreleasepool {
                 defer { CGImageSourceRemoveCacheAtIndex(source, index) }
-                guard let image = CGImageSourceCreateImageAtIndex(source, index, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary),
-                      CGImageSourceGetStatusAtIndex(source, index) == .statusComplete,
-                      0 < image.width, 0 < image.height else { throw ClipImageFileError.invalidImage }
-                return (width: image.width, height: image.height)
+                guard let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as NSDictionary?,
+                      let width = properties[kCGImagePropertyPixelWidth] as? Int,
+                      let height = properties[kCGImagePropertyPixelHeight] as? Int,
+                      0 < width, 0 < height,
+                      CGImageSourceCreateThumbnailAtIndex(source, index, validationOptions) != nil,
+                      CGImageSourceGetStatusAtIndex(source, index) == .statusComplete else { throw ClipImageFileError.invalidImage }
+                return (width: width, height: height)
             }
             if index == 0 { size = dimensions }
         }
