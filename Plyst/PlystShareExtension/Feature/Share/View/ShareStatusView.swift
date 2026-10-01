@@ -10,11 +10,12 @@ import UIKit
 @MainActor
 final class ShareStatusView: UIView {
     private let stack = UIStackView()
+    private let checkmarkView = UIImageView()
     private let indicator = UIActivityIndicatorView(style: .medium)
     private let titleLabel = UILabel()
-    private let button = UIButton(type: .system)
+    private let retryButton = UIButton(type: .system)
+    private let cancelButton = UIButton(type: .system)
     private let send: @MainActor (ShareStatusViewAction) -> Void
-    private var status = ShareStatus.saving
 
     init(
         frame: CGRect,
@@ -34,36 +35,52 @@ final class ShareStatusView: UIView {
     }
 
     func setStatus(_ status: ShareStatus) {
-        self.status = status
         switch status {
         case .saving:
+            checkmarkView.isHidden = true
             indicator.startAnimating()
             titleLabel.text = "저장 중"
-            button.setTitle("취소", for: .normal)
+            retryButton.isHidden = true
+            cancelButton.isHidden = false
+            cancelButton.setTitle("취소", for: .normal)
         case .completed:
+            checkmarkView.isHidden = false
             indicator.stopAnimating()
             titleLabel.text = "저장했습니다"
-            button.setTitle("완료", for: .normal)
+            retryButton.isHidden = true
+            cancelButton.isHidden = true
         case .failed:
+            checkmarkView.isHidden = true
             indicator.stopAnimating()
             titleLabel.text = "저장하지 못했습니다"
-            button.setTitle("닫기", for: .normal)
+            retryButton.isHidden = false
+            cancelButton.isHidden = false
+            cancelButton.setTitle("닫기", for: .normal)
         }
     }
 
     private func makeHierarchy() {
+        stack.addArrangedSubview(checkmarkView)
         stack.addArrangedSubview(indicator)
         stack.addArrangedSubview(titleLabel)
-        stack.addArrangedSubview(button)
+        stack.addArrangedSubview(retryButton)
+        stack.addArrangedSubview(cancelButton)
         addSubview(stack)
     }
 
     private func configureAppearance() {
         backgroundColor = .systemBackground
+        checkmarkView.image = UIImage(systemName: "checkmark.circle.fill")
+        checkmarkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 44)
+        checkmarkView.tintColor = .systemGreen
+        checkmarkView.isHidden = true
         titleLabel.font = .systemFont(ofSize: 21, weight: .bold)
         titleLabel.textColor = .label
         titleLabel.textAlignment = .center
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        retryButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        retryButton.setTitle("다시 시도", for: .normal)
+        retryButton.isHidden = true
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         stack.axis = .vertical
         stack.alignment = .center
         stack.spacing = 20
@@ -80,9 +97,11 @@ final class ShareStatusView: UIView {
     }
 
     private func bindActions() {
-        button.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            send(status == .completed ? .done : .cancel)
+        retryButton.addAction(UIAction { [weak self] _ in
+            self?.send(.retry)
+        }, for: .touchUpInside)
+        cancelButton.addAction(UIAction { [weak self] _ in
+            self?.send(.cancel)
         }, for: .touchUpInside)
     }
 }

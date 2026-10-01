@@ -17,7 +17,11 @@
 		DFA00013306A4A9700115D10 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00015306A4A9700115D10 /* GRDB */; };
 		DFA00014306A4A9700115D10 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00016306A4A9700115D10 /* GRDB */; };
 		DFC0000E306A4A9700115D10 /* PlystShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DFC00002306A4A9700115D10 /* PlystShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		DFC00010306A4A9700115D10 /* ClipAppGroupDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFC0000F306A4A9700115D10 /* ClipAppGroupDirectory.swift */; };
+		DFA0001D306A4A9700115D10 /* ReactorKit in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00018306A4A9700115D10 /* ReactorKit */; };
+		DFA0001E306A4A9700115D10 /* RxSwift in Frameworks */ = {isa = PBXBuildFile; productRef = DFA00019306A4A9700115D10 /* RxSwift */; };
+		DFA0001F306A4A9700115D10 /* SQLiteData in Frameworks */ = {isa = PBXBuildFile; productRef = DFA0001A306A4A9700115D10 /* SQLiteData */; };
+		DFA00020306A4A9700115D10 /* StructuredQueriesSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = DFA0001B306A4A9700115D10 /* StructuredQueriesSQLite */; };
+		DFA00021306A4A9700115D10 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = DFA0001C306A4A9700115D10 /* GRDB */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,7 +59,6 @@
 		DFEB0A21306A4A9500115D10 /* Plyst.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Plyst.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DFEB0A37306A4A9700115D10 /* PlystTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PlystTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DFC00002306A4A9700115D10 /* PlystShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PlystShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		DFC0000F306A4A9700115D10 /* ClipAppGroupDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Plyst/Service/Clip/ClipAppGroupDirectory.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -99,6 +102,11 @@
 			path = PlystTests;
 			sourceTree = "<group>";
 		};
+		DFE00001306A4A9700115D10 /* Common */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Common;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,6 +132,11 @@
 		DFC00006306A4A9700115D10 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				DFA0001D306A4A9700115D10 /* ReactorKit in Frameworks */,
+				DFA0001E306A4A9700115D10 /* RxSwift in Frameworks */,
+				DFA0001F306A4A9700115D10 /* SQLiteData in Frameworks */,
+				DFA00020306A4A9700115D10 /* StructuredQueriesSQLite in Frameworks */,
+				DFA00021306A4A9700115D10 /* GRDB in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -135,7 +148,7 @@
 				DFEB0A23306A4A9500115D10 /* Plyst */,
 				DFC00003306A4A9700115D10 /* PlystShareExtension */,
 				DFEB0A3A306A4A9700115D10 /* PlystTests */,
-				DFC0000F306A4A9700115D10 /* ClipAppGroupDirectory.swift */,
+				DFE00001306A4A9700115D10 /* Common */,
 				DFEB0A22306A4A9500115D10 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -169,6 +182,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				DFEB0A23306A4A9500115D10 /* Plyst */,
+				DFE00001306A4A9700115D10 /* Common */,
 			);
 			name = Plyst;
 			packageProductDependencies = (
@@ -223,9 +237,15 @@
 			);
 			fileSystemSynchronizedGroups = (
 				DFC00003306A4A9700115D10 /* PlystShareExtension */,
+				DFE00001306A4A9700115D10 /* Common */,
 			);
 			name = PlystShareExtension;
 			packageProductDependencies = (
+				DFA00018306A4A9700115D10 /* ReactorKit */,
+				DFA00019306A4A9700115D10 /* RxSwift */,
+				DFA0001A306A4A9700115D10 /* SQLiteData */,
+				DFA0001B306A4A9700115D10 /* StructuredQueriesSQLite */,
+				DFA0001C306A4A9700115D10 /* GRDB */,
 			);
 			productName = PlystShareExtension;
 			productReference = DFC00002306A4A9700115D10 /* PlystShareExtension.appex */;
@@ -313,7 +333,6 @@
 		DFC00005306A4A9700115D10 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
-				DFC00010306A4A9700115D10 /* ClipAppGroupDirectory.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
@@ -773,6 +792,31 @@
 			productName = GRDB;
 		};
 		DFA00016306A4A9700115D10 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFA00017306A4A9700115D10 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+		DFA00018306A4A9700115D10 /* ReactorKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFA00009306A4A9700115D10 /* XCRemoteSwiftPackageReference "ReactorKit" */;
+			productName = ReactorKit;
+		};
+		DFA00019306A4A9700115D10 /* RxSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFA0000A306A4A9700115D10 /* XCRemoteSwiftPackageReference "RxSwift" */;
+			productName = RxSwift;
+		};
+		DFA0001A306A4A9700115D10 /* SQLiteData */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFA0000F306A4A9700115D10 /* XCRemoteSwiftPackageReference "sqlite-data" */;
+			productName = SQLiteData;
+		};
+		DFA0001B306A4A9700115D10 /* StructuredQueriesSQLite */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFA00012306A4A9700115D10 /* XCRemoteSwiftPackageReference "swift-structured-queries" */;
+			productName = StructuredQueriesSQLite;
+		};
+		DFA0001C306A4A9700115D10 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = DFA00017306A4A9700115D10 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
