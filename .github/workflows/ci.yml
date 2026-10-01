@@ -67,3 +67,20 @@ jobs:
         if: matrix.target == 'test'
         timeout-minutes: 6
         run: make test-without-building XCODEBUILD_FLAGS=-skipMacroValidation
+
+      - name: Test summary
+        if: always() && matrix.target == 'test'
+        timeout-minutes: 2
+        run: |
+          if [ -d /tmp/plyst-test-results.xcresult ]; then
+            xcrun xcresulttool get test-results summary --path /tmp/plyst-test-results.xcresult
+          fi
+
+      - name: Simulator diagnostics
+        if: failure() && matrix.target == 'test'
+        timeout-minutes: 3
+        run: |
+          xcrun simctl list devices
+          xcrun simctl spawn "$TEST_DEVICE_ID" log show --last 15m --style compact \
+            --predicate 'process == "testmanagerd" OR process == "launchd_sim" OR subsystem CONTAINS "XCTest"' | tail -n 200 || true
+          ls -l ~/Library/Logs/DiagnosticReports || true
