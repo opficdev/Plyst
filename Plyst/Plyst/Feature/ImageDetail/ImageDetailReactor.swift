@@ -83,6 +83,7 @@ final class ImageDetailReactor: Reactorable {
         var didFailPreview = false
         /// 삭제됐거나 다른 곳에서 삭제돼 화면을 닫아야 하는지 여부입니다.
         var isRemoved = false
+        var isSaved = false
         var feedback: Feedback?
 
         init(clip: Clip) {
@@ -252,6 +253,7 @@ final class ImageDetailReactor: Reactorable {
 
         case .saved(let clip, let id):
             state.isSaving = false
+            state.isSaved = true
             state.clip = clip
             // 저장 중에 더 편집하지 않았다면 입력 필드를 저장된 값으로 정리합니다.
             if !state.draft.differs(from: clip) { state.draft = Draft(clip: clip) }

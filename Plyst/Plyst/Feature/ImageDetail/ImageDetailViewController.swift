@@ -49,7 +49,7 @@ final class ImageDetailViewController: ReactorViewController<ImageDetailReactor>
     }
 
     override func render(state: ImageDetailReactor.State) {
-        if state.isRemoved {
+        if state.isRemoved || state.isSaved {
             close()
             return
         }

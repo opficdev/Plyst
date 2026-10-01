@@ -100,7 +100,7 @@ final class TextDetailViewController: ReactorViewController<TextDetailReactor> {
         detailView.setSaveEnabled(state.canSave)
         detailView.setBusy(state.isDeleting)
         feedbackPresenter.update(state.feedback)
-        if state.isRemoved { close() }
+        if state.isRemoved || state.isSaved { close() }
     }
 
     /// 날짜는 한국어 년월일 형식으로 표시하고 시각은 다음 줄에 표시합니다.
