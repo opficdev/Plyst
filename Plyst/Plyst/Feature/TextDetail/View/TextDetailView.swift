@@ -128,14 +128,9 @@ final class TextDetailView: UIView, TextDetailViewable {
     private func configureAppearance() {
         backgroundColor = UIColor(resource: .homeCanvas)
 
-        titleLabel.attributedText = NSAttributedString(
-            string: "텍스트",
-            attributes: [
-                .font: UIFont.monospacedSystemFont(ofSize: 11, weight: .semibold),
-                .foregroundColor: UIColor(resource: .homeSecondaryText),
-                .kern: 0.88
-            ]
-        )
+        titleLabel.text = "텍스트"
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        titleLabel.textColor = UIColor(resource: .homePrimaryText)
 
         scrollView.keyboardDismissMode = .interactive
         scrollView.alwaysBounceVertical = true
