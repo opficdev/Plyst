@@ -19,6 +19,13 @@ final class HomeSceneComposition {
     private let images: ClipImageService
     private let clipboard: ClipClipboardService
     private let photos: ClipPhotoLibraryService
+    /// App Group 컨테이너를 찾지 못하면 nil입니다. 본 저장소가 정상이므로 시작은 계속하고 반입만 건너뜁니다.
+    private let imports: ClipShareImportService?
+    private var importTask: Task<Void, Never>?
+
+    deinit {
+        importTask?.cancel()
+    }
 
     init() throws {
         var directory = try FileManager.default.url(
@@ -41,6 +48,25 @@ final class HomeSceneComposition {
         self.images = images
         self.clipboard = clipboard
         photos = ClipPhotoLibraryService(storage: storage, images: images)
+        imports = Self.makeImportService(storage: storage, images: images)
+    }
+
+    private static func makeImportService(
+        storage: SQLiteClipStorageService,
+        images: ClipImageService
+    ) -> ClipShareImportService? {
+        do {
+            let directory = try ClipAppGroupDirectory()
+            return ClipShareImportService(
+                inboxDatabaseURL: directory.shareInboxDatabaseURL,
+                inboxImagesURL: directory.shareInboxImagesURL,
+                storage: storage,
+                images: images
+            )
+        } catch {
+            logger.error("공유 저장소 위치 확인 실패: \(String(describing: type(of: error)), privacy: .public)")
+            return nil
+        }
     }
 
     func makeRootViewController() -> UIViewController {
@@ -94,6 +120,26 @@ final class HomeSceneComposition {
             makeDetailViewController: makeDetail
         )
         return controller
+    }
+
+    /// Share Extension이 저장한 클립을 본 저장소로 옮깁니다. 이미 실행 중이면 새로 시작하지 않습니다.
+    /// 실패해도 화면 상태와 Inbox는 유지되며 다음 활성화에서 다시 시도합니다. 해제되면 진행 중인 반입을 취소합니다.
+    func importSharedClips() {
+        guard importTask == nil, let imports else { return }
+        importTask = Task { [weak self, imports] in
+            do {
+                let result = try await imports.importPendingClips()
+                if 0 < result.remainingCount {
+                    Self.logger.warning("공유 클립 반입 보류: \(result.remainingCount, privacy: .public)개")
+                }
+                if result.hasPendingCleanup { self?.startPendingCleanupRecovery() }
+            } catch is CancellationError {
+                // 해제에 따른 정상적인 중단입니다.
+            } catch {
+                Self.logger.error("공유 클립 반입 실패: \(String(describing: type(of: error)), privacy: .public)")
+            }
+            self?.importTask = nil
+        }
     }
 
     func startPendingCleanupRecovery() {

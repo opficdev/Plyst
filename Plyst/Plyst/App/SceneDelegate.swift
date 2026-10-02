@@ -27,6 +27,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.makeKeyAndVisible()
     }
 
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        composition?.importSharedClips()
+    }
+
     func sceneDidDisconnect(_ scene: UIScene) {
         window = nil
         composition = nil
@@ -39,6 +43,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             self.composition = composition
             window.rootViewController = root
             composition.startPendingCleanupRecovery()
+            // 시작 실패 후 다시 시도해 성공하면 Scene이 이미 활성 상태라 sceneDidBecomeActive가 오지 않습니다.
+            composition.importSharedClips()
         } catch {
             Self.logger.error("기록 화면 초기화 실패: \(String(describing: type(of: error)), privacy: .public)")
             composition = nil
