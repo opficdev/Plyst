@@ -118,17 +118,18 @@ final class ImageDetailViewController: ReactorViewController<ImageDetailReactor>
     }
 
     private func confirmDelete() {
-        let alert = UIAlertController(
+        let alert = ActionSheetViewController(
             title: "이 이미지를 삭제할까요?",
             message: "삭제하면 되돌릴 수 없습니다.",
-            preferredStyle: .actionSheet
+            items: [
+                ActionSheetItem(
+                    title: "삭제",
+                    role: .destructive,
+                    handler: { [weak self] in self?.reactor.action.onNext(.delete) }
+                ),
+                ActionSheetItem(title: "취소", role: .cancel)
+            ]
         )
-        alert.addAction(
-            UIAlertAction(title: "삭제", style: .destructive) { [weak self] _ in
-                self?.reactor.action.onNext(.delete)
-            }
-        )
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
         present(alert, animated: true)
     }
 }
