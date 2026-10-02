@@ -11,6 +11,7 @@ import ImageIO
 import UniformTypeIdentifiers
 
 /// 주입한 전용 루트에서 원본 바이트를 관리합니다. 같은 루트의 변경은 ClipImageService 하나가 조율해야 합니다.
+/// `ShareInboxImages`는 예외입니다. 저장과 정리 복구는 Share Extension만 실행하고 본 앱은 읽기와 삭제만 실행합니다.
 struct ClipImageFileStore: Sendable {
     /// 저장 전 검증에서 축소 디코딩하는 긴 변의 최대 픽셀 수입니다. 검증이 원본 해상도 비트맵을 만들지 않게 합니다.
     private static let validationPixelDimension = 64
