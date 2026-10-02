@@ -74,17 +74,23 @@ struct ClipShareService: Sendable {
         return try await loadData(from: provider, typeIdentifier: typeIdentifier)
     }
 
-    /// 완료 핸들러에서만 continuation을 재개하므로 정확히 한 번 재개합니다.
-    /// 작업을 취소하면 Progress를 취소해 느린 로드를 멈추고 완료 핸들러가 오류를 전달합니다.
+    /// 작업을 취소하면 Progress를 취소해 느린 로드를 멈춥니다.
+    /// 취소하면 NSItemProvider가 취소 오류로 완료 핸들러를 다시 호출할 수 있으므로 처음 호출만 사용해 continuation을 한 번만 재개합니다.
     @MainActor
     private static func loadData(
         from provider: NSItemProvider,
         typeIdentifier: String
     ) async throws -> Data {
         let progress = OSAllocatedUnfairLock<Progress?>(initialState: nil)
+        let isResumed = OSAllocatedUnfairLock(initialState: false)
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 let loading = provider.loadDataRepresentation(forTypeIdentifier: typeIdentifier) { data, error in
+                    let isFirst = isResumed.withLock { resumed in
+                        defer { resumed = true }
+                        return !resumed
+                    }
+                    guard isFirst else { return }
                     if let data {
                         continuation.resume(returning: data)
                     } else {
