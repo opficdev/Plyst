@@ -8,6 +8,9 @@
 import Foundation
 
 /// 같은 루트의 이미지 쓰기와 복구를 하나의 인스턴스에서 조율합니다. 별도 프로세스의 변경은 조율하지 않습니다.
+///
+/// `ShareInboxImages`는 두 프로세스가 다룹니다. 저장과 `recoverPendingCleanup`은 Share Extension만 실행합니다.
+/// 본 앱은 읽기와 `delete(id:)`만 실행합니다. 본 앱이 복구를 실행하면 Extension이 저장 중이라 아직 참조되지 않은 파일을 지울 수 있습니다.
 actor ClipImageService {
     private let storage: any ClipStorageService
     private let files: ClipImageFileStore
