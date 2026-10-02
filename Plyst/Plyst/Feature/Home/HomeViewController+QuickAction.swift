@@ -20,22 +20,23 @@ extension HomeViewController {
     /// 취소와 배경 탭은 Action을 보내지 않으므로 데이터가 바뀌지 않습니다.
     func showMenu(for clip: Clip) {
         guard presentedViewController == nil else { return }
-        let menu = UIAlertController(
+        let menu = ActionSheetViewController(
             title: Self.menuTitle(for: clip),
             message: Self.menuSummary(for: clip),
-            preferredStyle: .actionSheet
+            items: [
+                ActionSheetItem(
+                    title: clip.isPinned ? "고정 해제" : "고정",
+                    role: .default,
+                    handler: { [weak self] in self?.reactor.action.onNext(.setPinned(clip.id, !clip.isPinned)) }
+                ),
+                ActionSheetItem(
+                    title: "삭제",
+                    role: .destructive,
+                    handler: { [weak self] in self?.confirmDelete(clip) }
+                ),
+                ActionSheetItem(title: "취소", role: .cancel)
+            ]
         )
-        menu.addAction(
-            UIAlertAction(title: clip.isPinned ? "고정 해제" : "고정", style: .default) { [weak self] _ in
-                self?.reactor.action.onNext(.setPinned(clip.id, !clip.isPinned))
-            }
-        )
-        menu.addAction(
-            UIAlertAction(title: "삭제", style: .destructive) { [weak self] _ in
-                self?.confirmDelete(clip)
-            }
-        )
-        menu.addAction(UIAlertAction(title: "취소", style: .cancel))
         present(menu, animated: true)
     }
 
@@ -56,17 +57,18 @@ extension HomeViewController {
     }
 
     private func confirmDelete(_ clip: Clip) {
-        let alert = UIAlertController(
+        let alert = ActionSheetViewController(
             title: "이 \(Self.menuTitle(for: clip))를 삭제할까요?",
             message: "삭제하면 되돌릴 수 없습니다.",
-            preferredStyle: .actionSheet
+            items: [
+                ActionSheetItem(
+                    title: "삭제",
+                    role: .destructive,
+                    handler: { [weak self] in self?.reactor.action.onNext(.delete(clip.id)) }
+                ),
+                ActionSheetItem(title: "취소", role: .cancel)
+            ]
         )
-        alert.addAction(
-            UIAlertAction(title: "삭제", style: .destructive) { [weak self] _ in
-                self?.reactor.action.onNext(.delete(clip.id))
-            }
-        )
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
         present(alert, animated: true)
     }
 }
