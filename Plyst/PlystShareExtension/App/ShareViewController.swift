@@ -27,11 +27,13 @@ final class ShareViewController: UIViewController {
     private var reactor: ShareReactor?
     private var task: Task<Void, Never>?
     private var finishTask: Task<Void, Never>?
+    private var recoveryTask: Task<Void, Never>?
     private var didFinish = false
 
     deinit {
         task?.cancel()
         finishTask?.cancel()
+        recoveryTask?.cancel()
     }
 
     override func loadView() {
@@ -54,11 +56,30 @@ final class ShareViewController: UIViewController {
                 rootURL: directory.containerURL.appendingPathComponent("ShareInboxImages", isDirectory: true)
             )
             let images = ClipImageService(storage: storage, files: files)
+            startPendingCleanupRecovery(images)
             let item = ClipShareItem(item: extensionContext?.inputItems.first as? NSExtensionItem)
             bind(ShareReactor(item: item, service: ClipShareService(storage: storage, images: images)))
         } catch {
             Self.logger.error("공유 저장소 준비 실패: \(String(describing: type(of: error)), privacy: .public)")
             statusView.setStatus(.failed)
+        }
+    }
+
+    /// 이전 실행에서 중단된 저장이 남긴 불완전한 이미지 파일을 정리합니다.
+    /// 같은 ClipImageService 안에서는 정리와 저장이 직렬화됩니다. 화면이 해제되면 정리를 중단하고 다음 실행에서 다시 시도합니다.
+    private func startPendingCleanupRecovery(_ images: ClipImageService) {
+        recoveryTask?.cancel()
+        recoveryTask = Task {
+            do {
+                let pending = try await images.recoverPendingCleanup()
+                if !pending.isEmpty {
+                    Self.logger.warning("이미지 정리 보류: \(pending.count, privacy: .public)개")
+                }
+            } catch is CancellationError {
+                // 화면 생명주기에 따른 정상적인 중단입니다.
+            } catch {
+                Self.logger.error("이미지 정리 재시도 실패: \(String(describing: type(of: error)), privacy: .public)")
+            }
         }
     }
 
