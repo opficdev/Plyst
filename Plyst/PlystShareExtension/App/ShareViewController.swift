@@ -49,12 +49,8 @@ final class ShareViewController: UIViewController {
     private func prepare() {
         do {
             let directory = try ClipAppGroupDirectory()
-            let storage = try SQLiteClipStorageService(
-                databaseURL: directory.containerURL.appendingPathComponent("ShareInbox.sqlite")
-            )
-            let files = try ClipImageFileStore(
-                rootURL: directory.containerURL.appendingPathComponent("ShareInboxImages", isDirectory: true)
-            )
+            let storage = try SQLiteClipStorageService(databaseURL: directory.shareInboxDatabaseURL)
+            let files = try ClipImageFileStore(rootURL: directory.shareInboxImagesURL)
             let images = ClipImageService(storage: storage, files: files)
             startPendingCleanupRecovery(images)
             let item = ClipShareItem(item: extensionContext?.inputItems.first as? NSExtensionItem)
