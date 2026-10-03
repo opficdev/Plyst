@@ -32,3 +32,14 @@ Breakpoints_v2.xcbkptlist
 .module-cache/
 .swift-module-cache/
 .tmp/
+
+# Fastlane
+.bundle/
+vendor/bundle/
+.fastlane/
+fastlane/README.md
+fastlane/report.xml
+fastlane/test_output/
+fastlane/logs/
+fastlane/testflight_build/
+fastlane/appstore_build/

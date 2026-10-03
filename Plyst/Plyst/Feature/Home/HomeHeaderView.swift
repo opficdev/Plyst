@@ -10,7 +10,7 @@ import UIKit
 final class HomeTitleHeaderView: UIView, HomeTitleHeaderLike {
     let searchButton = UIButton(type: .system)
 
-    let mark = UILabel()
+    let mark = UIImageView()
     let title = UILabel()
 
     override init(frame: CGRect) {
@@ -26,12 +26,10 @@ final class HomeTitleHeaderView: UIView, HomeTitleHeaderLike {
     }
 
     private func configureAppearance() {
-        mark.attributedText = NSAttributedString(string: "P", attributes: [.kern: -0.72])
-        mark.font = .systemFont(ofSize: 18, weight: .heavy)
-        mark.textAlignment = .center
-        mark.textColor = UIColor(resource: .homeBottomText)
-        mark.backgroundColor = UIColor(resource: .homeMarkBackground)
+        mark.image = UIImage(resource: .homeLogo)
+        mark.contentMode = .scaleAspectFill
         mark.layer.cornerRadius = 10
+        mark.layer.masksToBounds = true
 
         title.attributedText = NSAttributedString(string: "Plyst", attributes: [.kern: -1.12])
         title.font = .systemFont(ofSize: 32, weight: .heavy)
