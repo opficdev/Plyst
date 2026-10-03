@@ -225,9 +225,9 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
     private func updateVisibleThumbnails(state: SearchReactor.State) {
         for cell in collectionView.visibleCells {
             guard let cell = cell as? any HomeImageCellLike,
-                  let key = cell.representedKey,
-                  let image = thumbnails.image(for: key, data: state.thumbnails[key]) else { continue }
-            cell.setThumbnail(image)
+                  let key = cell.representedKey else { continue }
+            let phase = thumbnails.phase(for: key, data: state.thumbnails, failed: state.failedThumbnails)
+            if !phase.isPending { cell.setThumbnail(phase) }
         }
     }
 
@@ -299,7 +299,7 @@ extension SearchViewController: UICollectionViewDataSource, UICollectionViewDele
                     with: clip,
                     now: reactor.currentState.now,
                     key: key,
-                    thumbnail: thumbnails.image(for: key, data: reactor.currentState.thumbnails[key]),
+                    thumbnail: thumbnails.phase(for: key, data: reactor.currentState.thumbnails, failed: reactor.currentState.failedThumbnails),
                     name: display.name,
                     onCopy: copy
                 )

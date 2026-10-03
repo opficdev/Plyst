@@ -19,6 +19,7 @@ final class ImageDetailView: UIView, ImageDetailViewLike, ClipDetailLike {
     let metaLabel = UILabel()
     private let imageView = UIImageView()
     private let previewMessage = UILabel()
+    private let failureIcon = UIImageView()
     private let photoButton = UIButton(type: .system)
     private let fieldsStack = UIStackView()
     private let nameRow = UIStackView()
@@ -71,6 +72,7 @@ final class ImageDetailView: UIView, ImageDetailViewLike, ClipDetailLike {
             }
         }
         previewMessage.isHidden = image != nil
+        failureIcon.isHidden = image != nil || !didFail
         previewMessage.text = didFail ? "이미지를 불러오지 못했습니다" : (isLoading ? "이미지를 불러오는 중입니다" : "")
     }
 
@@ -129,6 +131,13 @@ final class ImageDetailView: UIView, ImageDetailViewLike, ClipDetailLike {
         previewMessage.textColor = UIColor(resource: .homeSecondaryText)
         previewMessage.textAlignment = .center
         previewMessage.numberOfLines = 0
+        failureIcon.image = UIImage(
+            systemName: "exclamationmark.triangle",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 32, weight: .regular)
+        )
+        failureIcon.tintColor = UIColor(resource: .homePlaceholder)
+        failureIcon.contentMode = .scaleAspectFit
+        failureIcon.isHidden = true
 
         var photo = UIButton.Configuration.tinted()
         photo.title = "사진 앱에 저장"
@@ -185,6 +194,7 @@ final class ImageDetailView: UIView, ImageDetailViewLike, ClipDetailLike {
         card.addSubview(metaLabel)
         card.addSubview(imageView)
         card.addSubview(previewMessage)
+        card.addSubview(failureIcon)
         contentStack.addArrangedSubview(card)
         contentStack.addArrangedSubview(photoButton)
         contentStack.addArrangedSubview(fieldsStack)
@@ -201,7 +211,7 @@ final class ImageDetailView: UIView, ImageDetailViewLike, ClipDetailLike {
     }
 
     private func makeLayout() {
-        for view in [topBar, titleLabel, scrollView, contentStack, metaLabel, imageView, previewMessage] {
+        for view in [topBar, titleLabel, scrollView, contentStack, metaLabel, imageView, previewMessage, failureIcon] {
             view.translatesAutoresizingMaskIntoConstraints = false
         }
         // 비율보다 상한과 하한을 우선합니다. 시트가 나타나는 동안의 작은 높이에도 제약 충돌을 피합니다.
@@ -240,7 +250,9 @@ final class ImageDetailView: UIView, ImageDetailViewLike, ClipDetailLike {
             maximum,
             previewMessage.centerYAnchor.constraint(equalTo: imageView.centerYAnchor),
             previewMessage.leadingAnchor.constraint(equalTo: imageView.leadingAnchor),
-            previewMessage.trailingAnchor.constraint(equalTo: imageView.trailingAnchor)
+            previewMessage.trailingAnchor.constraint(equalTo: imageView.trailingAnchor),
+            failureIcon.centerXAnchor.constraint(equalTo: imageView.centerXAnchor),
+            failureIcon.bottomAnchor.constraint(equalTo: previewMessage.topAnchor, constant: -6)
         ])
         setAspectRatio(0.75)
         actionBar.makeLayout(in: self)

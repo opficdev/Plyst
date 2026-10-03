@@ -324,7 +324,13 @@ final class ClipShareServiceTests: XCTestCase {
 
     private func makeService(storage: any ClipStorageService) throws -> ClipShareService {
         let files = try ClipImageFileStore(rootURL: imagesDirectory)
-        return ClipShareService(storage: storage, images: ClipImageService(storage: storage, files: files))
+        let session = ClipImageDownloadURLProtocolStub.makeSession()
+        addTeardownBlock { session.invalidateAndCancel() }
+        return ClipShareService(
+            storage: storage,
+            images: ClipImageService(storage: storage, files: files),
+            downloads: ClipImageDownloadService(session: session)
+        )
     }
 
     /// 이미지 루트 아래의 항목 수입니다. 저장된 이미지 하나당 디렉터리 하나가 있습니다.

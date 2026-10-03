@@ -207,6 +207,7 @@ final class HomeImageCell: UICollectionViewCell, HomeImageCellLike, ClipCardLike
     private let imageView = UIImageView()
     private let placeholder = UIView()
     private let placeholderDot = UIView()
+    private let failureIcon = HomeCardFormat.makeFailureIcon(pointSize: 28)
     let name = UILabel()
     let metadata = UILabel()
     let copyButton: UIButton = HomeCopyButton()
@@ -233,7 +234,7 @@ final class HomeImageCell: UICollectionViewCell, HomeImageCellLike, ClipCardLike
         super.prepareForReuse()
         representedKey = nil
         onCopy = nil
-        setThumbnail(nil)
+        setThumbnail(.pending)
     }
 
     override func didMoveToWindow() {
@@ -247,7 +248,7 @@ final class HomeImageCell: UICollectionViewCell, HomeImageCellLike, ClipCardLike
         with clip: Clip,
         now: Date,
         key: HomeThumbnailKey,
-        thumbnail: UIImage?,
+        thumbnail: HomeThumbnailPhase,
         name attributedName: NSAttributedString? = nil,
         onCopy: (() -> Void)? = nil
     ) {
@@ -269,9 +270,10 @@ final class HomeImageCell: UICollectionViewCell, HomeImageCellLike, ClipCardLike
         setThumbnail(thumbnail)
     }
 
-    func setThumbnail(_ thumbnail: UIImage?) {
-        imageView.image = thumbnail
-        placeholder.isHidden = thumbnail != nil
+    func setThumbnail(_ thumbnail: HomeThumbnailPhase) {
+        imageView.image = thumbnail.image
+        placeholder.isHidden = !thumbnail.isPending
+        failureIcon.isHidden = !thumbnail.isFailed
     }
 
     static func height(
@@ -326,6 +328,7 @@ final class HomeImageCell: UICollectionViewCell, HomeImageCellLike, ClipCardLike
         imageBox.addSubview(placeholder)
         placeholder.addSubview(placeholderDot)
         imageBox.addSubview(imageView)
+        imageBox.addSubview(failureIcon)
         card.addSubview(name)
         card.addSubview(metadataRow)
     }
@@ -336,6 +339,7 @@ final class HomeImageCell: UICollectionViewCell, HomeImageCellLike, ClipCardLike
         imageView.translatesAutoresizingMaskIntoConstraints = false
         placeholder.translatesAutoresizingMaskIntoConstraints = false
         placeholderDot.translatesAutoresizingMaskIntoConstraints = false
+        failureIcon.translatesAutoresizingMaskIntoConstraints = false
         name.translatesAutoresizingMaskIntoConstraints = false
         metadataRow.translatesAutoresizingMaskIntoConstraints = false
 
@@ -360,6 +364,8 @@ final class HomeImageCell: UICollectionViewCell, HomeImageCellLike, ClipCardLike
             placeholderDot.leadingAnchor.constraint(equalTo: placeholder.leadingAnchor, constant: 5),
             placeholderDot.widthAnchor.constraint(equalToConstant: 5),
             placeholderDot.heightAnchor.constraint(equalToConstant: 5),
+            failureIcon.centerXAnchor.constraint(equalTo: imageBox.centerXAnchor),
+            failureIcon.centerYAnchor.constraint(equalTo: imageBox.centerYAnchor),
             name.topAnchor.constraint(equalTo: imageBox.bottomAnchor, constant: 10),
             name.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
             name.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -12),

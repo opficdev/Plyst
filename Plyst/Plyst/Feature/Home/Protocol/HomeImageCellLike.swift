@@ -17,12 +17,12 @@ protocol HomeImageCellLike: UICollectionViewCell, ReuseIdentifiable {
         with clip: Clip,
         now: Date,
         key: HomeThumbnailKey,
-        thumbnail: UIImage?,
+        thumbnail: HomeThumbnailPhase,
         name: NSAttributedString?,
         onCopy: (() -> Void)?
     )
 
-    func setThumbnail(_ thumbnail: UIImage?)
+    func setThumbnail(_ thumbnail: HomeThumbnailPhase)
 
     static func height(
         for clip: Clip,

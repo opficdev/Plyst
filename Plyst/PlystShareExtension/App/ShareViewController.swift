@@ -24,6 +24,8 @@ final class ShareViewController: UIViewController {
     /// 저장 완료를 보여 준 뒤 요청을 종료하기까지의 시간입니다.
     private static let completionDelay = Duration.seconds(2)
 
+    /// 이미지 URL 내려받기에 쓰는 세션입니다. 화면이 해제될 때 진행 중인 전송과 함께 무효화합니다.
+    private let downloadSession = URLSession(configuration: ClipImageDownloadService.configuration)
     private var reactor: ShareReactor?
     private var task: Task<Void, Never>?
     private var finishTask: Task<Void, Never>?
@@ -34,6 +36,7 @@ final class ShareViewController: UIViewController {
         task?.cancel()
         finishTask?.cancel()
         recoveryTask?.cancel()
+        downloadSession.invalidateAndCancel()
     }
 
     override func loadView() {
@@ -54,7 +57,12 @@ final class ShareViewController: UIViewController {
             let images = ClipImageService(storage: storage, files: files)
             startPendingCleanupRecovery(images)
             let item = ClipShareItem(item: extensionContext?.inputItems.first as? NSExtensionItem)
-            bind(ShareReactor(item: item, service: ClipShareService(storage: storage, images: images)))
+            let service = ClipShareService(
+                storage: storage,
+                images: images,
+                downloads: ClipImageDownloadService(session: downloadSession)
+            )
+            bind(ShareReactor(item: item, service: service))
         } catch {
             Self.logger.error("공유 저장소 준비 실패: \(String(describing: type(of: error)), privacy: .public)")
             statusView.setStatus(.failed)
