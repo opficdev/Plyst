@@ -8,9 +8,9 @@
 import UIKit
 
 @MainActor
-final class HomeEmptyStateView: UIStackView {
-    private let emptyTitle = UILabel()
-    private let emptyBody = UILabel()
+final class HomeEmptyStateView: UIStackView, HomeEmptyStateLike {
+    let emptyTitle = UILabel()
+    let emptyBody = UILabel()
 
     override init(frame: CGRect) {
         super.init(frame: frame)

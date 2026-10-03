@@ -7,18 +7,18 @@
 
 import UIKit
 
-final class HomeTextCell: UICollectionViewCell, HomeTextCellable {
+final class HomeTextCell: UICollectionViewCell, HomeTextCellLike, ClipCardLike {
     static let nameFont = UIFont.systemFont(ofSize: 14.5, weight: .semibold)
     static let bodyFont = UIFont.systemFont(ofSize: 14.5)
     private static let metadataFont = UIFont.monospacedSystemFont(ofSize: 10.5, weight: .medium)
 
-    private let card = UIView()
+    let card = UIView()
     private let quote = UILabel()
     private let linkIcon = UIImageView()
-    private let name = UILabel()
+    let name = UILabel()
     private let body = UILabel()
-    private let metadata = UILabel()
-    private let copyButton = HomeCopyButton()
+    let metadata = UILabel()
+    let copyButton: UIButton = HomeCopyButton()
     private lazy var metadataRow = UIStackView(arrangedSubviews: [metadata, copyButton])
     private lazy var stack = UIStackView(arrangedSubviews: [name, body, metadataRow])
     private var onCopy: (() -> Void)?
@@ -198,18 +198,18 @@ final class HomeTextCell: UICollectionViewCell, HomeTextCellable {
     }
 }
 
-final class HomeImageCell: UICollectionViewCell, HomeImageCellable {
+final class HomeImageCell: UICollectionViewCell, HomeImageCellLike, ClipCardLike {
     private static let nameFont = UIFont.systemFont(ofSize: 14.5, weight: .semibold)
     private static let metadataFont = UIFont.monospacedSystemFont(ofSize: 10.5, weight: .medium)
 
-    private let card = UIView()
+    let card = UIView()
     private let imageBox = UIView()
     private let imageView = UIImageView()
     private let placeholder = UIView()
     private let placeholderDot = UIView()
-    private let name = UILabel()
-    private let metadata = UILabel()
-    private let copyButton = HomeCopyButton()
+    let name = UILabel()
+    let metadata = UILabel()
+    let copyButton: UIButton = HomeCopyButton()
     private lazy var metadataRow = UIStackView(arrangedSubviews: [metadata, copyButton])
     private var onCopy: (() -> Void)?
 

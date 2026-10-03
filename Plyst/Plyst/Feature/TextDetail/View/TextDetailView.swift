@@ -8,7 +8,7 @@
 import UIKit
 
 @MainActor
-final class TextDetailView: UIView, TextDetailViewable {
+final class TextDetailView: UIView, TextDetailViewLike, ClipDetailLike {
     private static let bodyAttributes: [NSAttributedString.Key: Any] = {
         let style = NSMutableParagraphStyle()
         style.minimumLineHeight = 35
@@ -21,25 +21,25 @@ final class TextDetailView: UIView, TextDetailViewable {
     }()
 
     private let topBar = UIView()
-    private let closeButton = DetailBarButton(style: .icon("xmark"))
-    private let titleLabel = UILabel()
-    private let saveButton = DetailBarButton(style: .title("저장"))
+    let closeButton: UIButton = DetailBarButton(style: .icon("xmark"))
+    let titleLabel = UILabel()
+    let saveButton: UIButton = DetailBarButton(style: .title("저장"))
     private let scrollView = UIScrollView()
     private let contentStack = UIStackView()
-    private let card = UIView()
-    private let metaLabel = UILabel()
+    let card = UIView()
+    let metaLabel = UILabel()
     private let textView = UITextView()
     private let fieldsStack = UIStackView()
     private let nameRow = UIStackView()
-    private let nameField = UITextField()
+    let nameField = UITextField()
     private let pinRow = UIStackView()
-    private let pinLabel = UILabel()
-    private let pinSwitch = UISwitch()
+    let pinLabel = UILabel()
+    let pinSwitch = UISwitch()
     private let memoRow = UIStackView()
     private let memoView = UITextView()
     private let memoPlaceholder = UILabel()
-    private let datesView = ClipDetailDatesView()
-    private lazy var actionBar = ClipDetailActionBarView(
+    let datesView = ClipDetailDatesView()
+    lazy var actionBar = ClipDetailActionBarView(
         copy: { [weak self] in self?.send(.copy) },
         delete: { [weak self] in self?.send(.delete) }
     )

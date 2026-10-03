@@ -9,11 +9,11 @@ import UIKit
 
 /// 화면 하단에 고정되는 삭제와 다시 복사 버튼 바입니다.
 /// 하단 가장자리는 키보드가 올라오면 키보드 위로 따라 올라갑니다.
-final class ClipDetailActionBarView: UIView {
-    private let line = UIView()
+final class ClipDetailActionBarView: UIView, ClipDetailActionBarLike {
+    let line = UIView()
     private let stack = UIStackView()
-    private let deleteButton = UIButton(type: .system)
-    private let copyButton = UIButton(type: .system)
+    let deleteButton = UIButton(type: .system)
+    let copyButton = UIButton(type: .system)
     private let copy: @MainActor () -> Void
     private let delete: @MainActor () -> Void
 

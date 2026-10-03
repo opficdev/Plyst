@@ -1,5 +1,5 @@
 //
-//  HomePinnedRowViewable.swift
+//  HomePinnedRowViewLike.swift
 //  Plyst
 //
 //  Created by opfic on 10/1/26.
@@ -8,7 +8,7 @@
 import UIKit
 
 @MainActor
-protocol HomePinnedRowViewable: UICollectionReusableView, ReuseIdentifiable {
+protocol HomePinnedRowViewLike: UICollectionReusableView, ReuseIdentifiable {
     static var height: CGFloat { get }
     static var thumbnailDimension: CGFloat { get }
 

@@ -1,5 +1,5 @@
 //
-//  ImageDetailViewable.swift
+//  ImageDetailViewLike.swift
 //  Plyst
 //
 //  Created by opfic on 10/1/26.
@@ -8,7 +8,7 @@
 import UIKit
 
 @MainActor
-protocol ImageDetailViewable: UIView {
+protocol ImageDetailViewLike: UIView {
     func setContent(meta: String)
     func setPreview(
         _ image: UIImage?,

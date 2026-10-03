@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
+final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewLike, SectionTitleLike {
     private static let titleTopInset = CGFloat(20)
     private static let rowTopInset = CGFloat(14)
     private static let bottomInset = CGFloat(16)
@@ -21,8 +21,8 @@ final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
         titleTopInset + ceil(titleFont.lineHeight) + rowTopInset + HomePinnedClipView.height + bottomInset
     }
 
-    private let title = UILabel()
-    private let rule = UIView()
+    let title = UILabel()
+    let rule = UIView()
     private let scrollView = UIScrollView()
     private let stack = UIStackView()
     private var items = [HomePinnedClipView]()

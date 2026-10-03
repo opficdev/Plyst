@@ -7,11 +7,11 @@
 
 import UIKit
 
-final class HomeTitleHeaderView: UIView {
+final class HomeTitleHeaderView: UIView, HomeTitleHeaderLike {
     let searchButton = UIButton(type: .system)
 
-    private let mark = UILabel()
-    private let title = UILabel()
+    let mark = UILabel()
+    let title = UILabel()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -79,9 +79,9 @@ final class HomeTitleHeaderView: UIView {
     }
 }
 
-final class HomeSectionHeaderView: UICollectionReusableView, HomeSectionHeaderViewable {
-    private let title = UILabel()
-    private let rule = UIView()
+final class HomeSectionHeaderView: UICollectionReusableView, HomeSectionHeaderViewLike, SectionTitleLike {
+    let title = UILabel()
+    let rule = UIView()
 
     override init(frame: CGRect) {
         super.init(frame: frame)

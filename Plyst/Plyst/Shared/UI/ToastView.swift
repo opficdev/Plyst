@@ -9,8 +9,8 @@ import UIKit
 
 /// 상단에서 내려오며 나타나고 올라가며 사라지는 메시지 토스트입니다. 표시 시간과 색상 선택은 호출부가 결정합니다.
 @MainActor
-final class ToastView: UIView {
-    private let label = UILabel()
+final class ToastView: UIView, ToastLike {
+    let label = UILabel()
     private var isVisible = false
     private var animationID = UUID()
 

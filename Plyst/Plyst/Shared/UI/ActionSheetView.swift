@@ -9,12 +9,12 @@ import UIKit
 
 /// 어두운 배경 위 화면 가운데에 제목과 요약 문구와 항목 버튼을 카드로 표시하는 공용 액션 시트 화면입니다.
 /// 카드가 화면보다 커지면 항목 영역만 스크롤됩니다.
-final class ActionSheetView: UIView {
-    private let scrimView = UIView()
-    private let cardView = UIView()
+final class ActionSheetView: UIView, ActionSheetLike {
+    let scrimView = UIView()
+    let cardView = UIView()
     private let headerStack = UIStackView()
-    private let titleLabel = UILabel()
-    private let messageLabel = UILabel()
+    let titleLabel = UILabel()
+    let messageLabel = UILabel()
     private let scrollView = UIScrollView()
     private let buttonStack = UIStackView()
     private let items: [ActionSheetItem]
