@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class HomeTextCell: UICollectionViewCell, HomeTextCellable {
+final class HomeTextCell: UICollectionViewCell, HomeTextCellLike {
     static let nameFont = UIFont.systemFont(ofSize: 14.5, weight: .semibold)
     static let bodyFont = UIFont.systemFont(ofSize: 14.5)
     private static let metadataFont = UIFont.monospacedSystemFont(ofSize: 10.5, weight: .medium)
@@ -198,7 +198,7 @@ final class HomeTextCell: UICollectionViewCell, HomeTextCellable {
     }
 }
 
-final class HomeImageCell: UICollectionViewCell, HomeImageCellable {
+final class HomeImageCell: UICollectionViewCell, HomeImageCellLike {
     private static let nameFont = UIFont.systemFont(ofSize: 14.5, weight: .semibold)
     private static let metadataFont = UIFont.monospacedSystemFont(ofSize: 10.5, weight: .medium)
 

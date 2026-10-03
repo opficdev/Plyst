@@ -8,7 +8,7 @@
 import UIKit
 
 @MainActor
-final class ImageDetailView: UIView, ImageDetailViewable {
+final class ImageDetailView: UIView, ImageDetailViewLike {
     private let topBar = UIView()
     private let closeButton = DetailBarButton(style: .icon("xmark"))
     private let titleLabel = UILabel()

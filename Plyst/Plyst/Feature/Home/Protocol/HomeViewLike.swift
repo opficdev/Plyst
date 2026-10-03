@@ -1,5 +1,5 @@
 //
-//  HomeViewable.swift
+//  HomeViewLike.swift
 //  Plyst
 //
 //  Created by opfic on 10/1/26.
@@ -8,13 +8,13 @@
 import UIKit
 
 @MainActor
-protocol HomeViewable: UIView {
+protocol HomeViewLike: UIView {
     var layout: HomeGridLayout { get }
     var collectionView: UICollectionView { get }
-    var textCellType: any HomeTextCellable.Type { get }
-    var imageCellType: any HomeImageCellable.Type { get }
-    var sectionHeaderType: any HomeSectionHeaderViewable.Type { get }
-    var pinnedRowType: any HomePinnedRowViewable.Type { get }
+    var textCellType: any HomeTextCellLike.Type { get }
+    var imageCellType: any HomeImageCellLike.Type { get }
+    var sectionHeaderType: any HomeSectionHeaderViewLike.Type { get }
+    var pinnedRowType: any HomePinnedRowViewLike.Type { get }
 
     func reloadContent()
     func updateScrollPosition(_ offset: CGFloat)

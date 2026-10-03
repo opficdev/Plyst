@@ -8,7 +8,7 @@
 import UIKit
 
 @MainActor
-final class TextDetailView: UIView, TextDetailViewable {
+final class TextDetailView: UIView, TextDetailViewLike {
     private static let bodyAttributes: [NSAttributedString.Key: Any] = {
         let style = NSMutableParagraphStyle()
         style.minimumLineHeight = 35

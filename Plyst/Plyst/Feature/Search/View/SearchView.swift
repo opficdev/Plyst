@@ -8,7 +8,7 @@
 import UIKit
 
 @MainActor
-final class SearchView: UIView, SearchViewable {
+final class SearchView: UIView, SearchViewLike {
     let layout = HomeGridLayout()
     private(set) lazy var collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
     private let backdrop = UIView()
@@ -61,9 +61,9 @@ final class SearchView: UIView, SearchViewable {
         updateBorder()
     }
 
-    var textCellType: any HomeTextCellable.Type { HomeTextCell.self }
-    var imageCellType: any HomeImageCellable.Type { HomeImageCell.self }
-    var sectionHeaderType: any HomeSectionHeaderViewable.Type { HomeSectionHeaderView.self }
+    var textCellType: any HomeTextCellLike.Type { HomeTextCell.self }
+    var imageCellType: any HomeImageCellLike.Type { HomeImageCell.self }
+    var sectionHeaderType: any HomeSectionHeaderViewLike.Type { HomeSectionHeaderView.self }
 
     func focusSearchField() {
         searchField.becomeFirstResponder()

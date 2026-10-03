@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewable {
+final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewLike {
     private static let titleTopInset = CGFloat(20)
     private static let rowTopInset = CGFloat(14)
     private static let bottomInset = CGFloat(16)
