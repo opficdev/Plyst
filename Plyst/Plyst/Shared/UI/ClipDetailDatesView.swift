@@ -8,10 +8,10 @@
 import UIKit
 
 /// 저장한 날짜와 마지막 사용 시각을 두 칸으로 나란히 표시합니다.
-final class ClipDetailDatesView: UIView {
+final class ClipDetailDatesView: UIView, ClipDetailDatesLike {
     private let stack = UIStackView()
-    private let savedValue = UILabel()
-    private let lastUsedValue = UILabel()
+    let savedValue = UILabel()
+    let lastUsedValue = UILabel()
 
     override init(frame: CGRect) {
         super.init(frame: frame)

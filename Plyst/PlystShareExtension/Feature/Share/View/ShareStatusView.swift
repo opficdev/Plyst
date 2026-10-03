@@ -8,13 +8,13 @@
 import UIKit
 
 @MainActor
-final class ShareStatusView: UIView {
+final class ShareStatusView: UIView, ShareStatusLike {
     private let stack = UIStackView()
-    private let checkmarkView = UIImageView()
-    private let indicator = UIActivityIndicatorView(style: .medium)
-    private let titleLabel = UILabel()
-    private let retryButton = UIButton(type: .system)
-    private let cancelButton = UIButton(type: .system)
+    let checkmarkView = UIImageView()
+    let indicator = UIActivityIndicatorView(style: .medium)
+    let titleLabel = UILabel()
+    let retryButton = UIButton(type: .system)
+    let cancelButton = UIButton(type: .system)
     private let send: @MainActor (ShareStatusViewAction) -> Void
 
     init(
