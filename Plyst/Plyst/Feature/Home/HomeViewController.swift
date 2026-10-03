@@ -123,9 +123,9 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
     private func updateVisibleThumbnails(state: HomeReactor.State) {
         for cell in collectionView.visibleCells {
             guard let cell = cell as? any HomeImageCellLike,
-                  let key = cell.representedKey,
-                  let data = state.thumbnails[key] else { continue }
-            if let image = thumbnails.image(for: key, data: data) { cell.setThumbnail(image) }
+                  let key = cell.representedKey else { continue }
+            let phase = thumbnails.phase(for: key, data: state.thumbnails, failed: state.failedThumbnails)
+            if !phase.isPending { cell.setThumbnail(phase) }
         }
         for view in collectionView.visibleSupplementaryViews(ofKind: HomeGridLayout.pinnedRowKind) {
             guard let row = view as? any HomePinnedRowViewLike else { continue }
@@ -141,7 +141,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
             clips: pinnedClips,
             now: state.now,
             key: { [weak self] clip in self?.pinnedRowThumbnailKey(for: clip) },
-            thumbnail: { [weak self] key in self?.thumbnails.image(for: key, data: state.thumbnails[key]) },
+            thumbnail: { [weak self] key in self?.thumbnails.phase(for: key, data: state.thumbnails, failed: state.failedThumbnails) ?? .pending },
             send: { [weak self] action in self?.handle(action) }
         )
         requestPinnedRowThumbnails(row, state: state)
@@ -291,7 +291,7 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
                     with: clip,
                     now: reactor.currentState.now,
                     key: key,
-                    thumbnail: thumbnails.image(for: key, data: reactor.currentState.thumbnails[key]),
+                    thumbnail: thumbnails.phase(for: key, data: reactor.currentState.thumbnails, failed: reactor.currentState.failedThumbnails),
                     name: nil,
                     onCopy: { [weak self] in self?.reactor.action.onNext(.copy(clip.id)) }
                 )

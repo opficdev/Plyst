@@ -18,6 +18,7 @@ final class HomePinnedClipView: UIView, ClipCardLike {
     let card = UIView()
     private let visualBox = UIView()
     private let thumbnailView = UIImageView()
+    private let failureIcon = HomeCardFormat.makeFailureIcon(pointSize: 22)
     private let quote = UILabel()
     private let linkIcon = UIImageView()
     let name = UILabel()
@@ -51,7 +52,7 @@ final class HomePinnedClipView: UIView, ClipCardLike {
         clip: Clip,
         now: Date,
         key: HomeThumbnailKey?,
-        thumbnail: UIImage?,
+        thumbnail: HomeThumbnailPhase,
         onCopy: @escaping () -> Void
     ) {
         self.onCopy = onCopy
@@ -62,6 +63,7 @@ final class HomePinnedClipView: UIView, ClipCardLike {
             quote.isHidden = isWebLink
             linkIcon.isHidden = !isWebLink
             thumbnailView.isHidden = true
+            failureIcon.isHidden = true
             name.text = clip.name ?? text
             metadata.text = "텍스트 · \(HomeCardFormat.time(for: clip.createdAt, now: now))"
 
@@ -70,7 +72,8 @@ final class HomePinnedClipView: UIView, ClipCardLike {
             quote.isHidden = true
             linkIcon.isHidden = true
             thumbnailView.isHidden = false
-            thumbnailView.image = thumbnail
+            thumbnailView.image = thumbnail.image
+            failureIcon.isHidden = !thumbnail.isFailed
             name.text = clip.name ?? "이름 없는 이미지"
             metadata.text = "이미지 · \(HomeCardFormat.time(for: clip.createdAt, now: now))"
         }
@@ -118,6 +121,7 @@ final class HomePinnedClipView: UIView, ClipCardLike {
         visualBox.addSubview(thumbnailView)
         visualBox.addSubview(quote)
         visualBox.addSubview(linkIcon)
+        visualBox.addSubview(failureIcon)
         card.addSubview(textStack)
         card.addSubview(copyButton)
     }
@@ -128,6 +132,7 @@ final class HomePinnedClipView: UIView, ClipCardLike {
         thumbnailView.translatesAutoresizingMaskIntoConstraints = false
         quote.translatesAutoresizingMaskIntoConstraints = false
         linkIcon.translatesAutoresizingMaskIntoConstraints = false
+        failureIcon.translatesAutoresizingMaskIntoConstraints = false
         textStack.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
@@ -149,6 +154,8 @@ final class HomePinnedClipView: UIView, ClipCardLike {
             linkIcon.centerYAnchor.constraint(equalTo: visualBox.centerYAnchor),
             linkIcon.widthAnchor.constraint(equalToConstant: 28),
             linkIcon.heightAnchor.constraint(equalToConstant: 28),
+            failureIcon.centerXAnchor.constraint(equalTo: visualBox.centerXAnchor),
+            failureIcon.centerYAnchor.constraint(equalTo: visualBox.centerYAnchor),
             textStack.leadingAnchor.constraint(equalTo: visualBox.trailingAnchor, constant: 10),
             textStack.trailingAnchor.constraint(equalTo: copyButton.leadingAnchor, constant: -8),
             textStack.centerYAnchor.constraint(equalTo: card.centerYAnchor),

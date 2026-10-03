@@ -45,7 +45,7 @@ final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewLike, 
         clips: [Clip],
         now: Date,
         key: (Clip) -> HomeThumbnailKey?,
-        thumbnail: (HomeThumbnailKey) -> UIImage?,
+        thumbnail: (HomeThumbnailKey) -> HomeThumbnailPhase,
         send: @escaping @MainActor (HomePinnedRowViewAction) -> Void
     ) {
         self.send = send
@@ -59,7 +59,7 @@ final class HomePinnedRowView: UICollectionReusableView, HomePinnedRowViewLike, 
                 clip: clip,
                 now: now,
                 key: clipKey,
-                thumbnail: clipKey.flatMap(thumbnail),
+                thumbnail: clipKey.map(thumbnail) ?? .pending,
                 onCopy: { [weak self] in self?.send?(.copy(clip.id)) }
             )
         }

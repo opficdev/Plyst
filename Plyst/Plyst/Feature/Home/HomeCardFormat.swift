@@ -16,6 +16,19 @@ enum HomeCardFormat {
         )
     }
 
+    /// 이미지 클립의 썸네일을 표시하지 못할 때 대신 표시하는 숨겨진 아이콘입니다.
+    @MainActor
+    static func makeFailureIcon(pointSize: CGFloat) -> UIImageView {
+        let icon = UIImageView(image: UIImage(
+            systemName: "exclamationmark.triangle",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: pointSize, weight: .regular)
+        ))
+        icon.tintColor = UIColor(resource: .homePlaceholder)
+        icon.contentMode = .scaleAspectFit
+        icon.isHidden = true
+        return icon
+    }
+
     static func time(
         for date: Date,
         now: Date

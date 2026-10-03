@@ -16,7 +16,7 @@ protocol HomePinnedRowViewLike: UICollectionReusableView, ReuseIdentifiable {
         clips: [Clip],
         now: Date,
         key: (Clip) -> HomeThumbnailKey?,
-        thumbnail: (HomeThumbnailKey) -> UIImage?,
+        thumbnail: (HomeThumbnailKey) -> HomeThumbnailPhase,
         send: @escaping @MainActor (HomePinnedRowViewAction) -> Void
     )
 
