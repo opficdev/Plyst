@@ -452,6 +452,7 @@
 				DEVELOPMENT_TEAM = 4CPC6N38WA;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Plyst/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "저장한 이미지를 사진 앱에 추가합니다.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -491,6 +492,7 @@
 				DEVELOPMENT_TEAM = 4CPC6N38WA;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Plyst/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "저장한 이미지를 사진 앱에 추가합니다.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
