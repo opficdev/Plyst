@@ -169,7 +169,7 @@ final class ClipShareServiceImageURLTests: XCTestCase {
 
     func testDownloadedImageStorageFailurePropagatesAndRemovesFile() async throws {
         let storage = try makeStorage()
-        let spy = ClipClipboardStorageServiceSpy(
+        let spy = ClipboardStorageServiceSpy(
             storage: storage,
             beforeInsert: { throw ClipStorageError.writeFailed }
         )

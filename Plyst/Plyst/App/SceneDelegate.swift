@@ -17,6 +17,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
     private var composition: HomeSceneComposition?
+    private var isClipboardSaveRequested = false
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
@@ -25,15 +26,39 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.window = window
         configureRoot(in: window)
         window.makeKeyAndVisible()
+        request(from: connectionOptions.urlContexts)
+    }
+
+    func scene(
+        _ scene: UIScene,
+        openURLContexts contexts: Set<UIOpenURLContext>
+    ) {
+        request(from: contexts)
+        if scene.activationState == .foregroundActive { saveClipboardIfRequested() }
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
         composition?.importSharedClips()
+        saveClipboardIfRequested()
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
         window = nil
         composition = nil
+    }
+
+    private func request(from contexts: Set<UIOpenURLContext>) {
+        if contexts.contains(where: { AppLink(url: $0.url) == .saveClipboard }) {
+            isClipboardSaveRequested = true
+        }
+    }
+
+    /// 클립보드 읽기는 앱이 활성 상태일 때만 가능하므로 활성화된 뒤에 요청을 처리합니다.
+    /// 처리할 수 없는 상태에서 요청이 남아 이후 활성화에 실행되지 않도록 항상 요청을 비웁니다.
+    private func saveClipboardIfRequested() {
+        guard isClipboardSaveRequested else { return }
+        isClipboardSaveRequested = false
+        composition?.saveCurrentClipboard()
     }
 
     private func configureRoot(in window: UIWindow) {

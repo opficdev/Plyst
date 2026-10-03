@@ -1,6 +1,6 @@
 //
 //  ShareStatusViewAction.swift
-//  PlystShareExtension
+//  ShareExtension
 //
 //  Created by opfic on 10/1/26.
 //

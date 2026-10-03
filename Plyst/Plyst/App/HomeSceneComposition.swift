@@ -6,6 +6,8 @@
 //
 
 import OSLog
+import ReactorKit
+import RxSwift
 import UIKit
 
 @MainActor
@@ -17,11 +19,12 @@ final class HomeSceneComposition {
 
     private let storage: SQLiteClipStorageService
     private let images: ClipImageService
-    private let clipboard: ClipClipboardService
+    private let clipboard: ClipboardService
     private let photos: ClipPhotoLibraryService
     /// App Group 컨테이너를 찾지 못하면 nil입니다. 본 저장소가 정상이므로 시작은 계속하고 반입만 건너뜁니다.
     private let imports: ClipShareImportService?
     private var importTask: Task<Void, Never>?
+    private weak var home: HomeViewController?
 
     deinit {
         importTask?.cancel()
@@ -43,7 +46,7 @@ final class HomeSceneComposition {
         let storage = try SQLiteClipStorageService(databaseURL: directory.appendingPathComponent("clips.sqlite"))
         let files = try ClipImageFileStore(rootURL: directory.appendingPathComponent("images", isDirectory: true))
         let images = ClipImageService(storage: storage, files: files)
-        let clipboard = ClipClipboardService(storage: storage, images: images)
+        let clipboard = ClipboardService(storage: storage, images: images)
         self.storage = storage
         self.images = images
         self.clipboard = clipboard
@@ -119,7 +122,13 @@ final class HomeSceneComposition {
             },
             makeDetailViewController: makeDetail
         )
+        home = controller
         return controller
+    }
+
+    /// 기록 화면의 저장 버튼과 같은 Action으로 현재 클립보드를 저장합니다. 화면이 로드된 뒤에 호출해야 합니다.
+    func saveCurrentClipboard() {
+        home?.reactor.action.onNext(.saveCurrentClipboard)
     }
 
     /// Share Extension이 저장한 클립을 본 저장소로 옮깁니다. 이미 실행 중이면 새로 시작하지 않습니다.

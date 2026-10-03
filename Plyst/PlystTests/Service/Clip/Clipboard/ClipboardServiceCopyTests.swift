@@ -1,5 +1,5 @@
 //
-//  ClipClipboardServiceCopyTests.swift
+//  ClipboardServiceCopyTests.swift
 //  PlystTests
 //
 //  Created by opfic on 9/29/26.
@@ -11,7 +11,7 @@ import XCTest
 @testable import Plyst
 
 @MainActor
-final class ClipClipboardServiceCopyTests: XCTestCase {
+final class ClipboardServiceCopyTests: XCTestCase {
     private let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Plyst-copy-\(UUID())", isDirectory: true)
     private var url: URL { directory.appendingPathComponent("clips.sqlite") }
 
@@ -39,7 +39,7 @@ final class ClipClipboardServiceCopyTests: XCTestCase {
             storage: storage,
             files: try ClipImageFileStore(rootURL: directory.appendingPathComponent("images"))
         )
-        let service = ClipClipboardService(
+        let service = ClipboardService(
             storage: storage,
             images: images,
             reader: reader,
@@ -68,7 +68,7 @@ final class ClipClipboardServiceCopyTests: XCTestCase {
         let clip = Clip(content: .text("원문"), lastUsedAt: Date(timeIntervalSinceReferenceDate: 50))
         try await storage.insert(clip)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage)
+        let spy = ClipboardStorageServiceSpy(storage: storage)
         let writer = ClipboardWriterSpy(result: .notObserved)
         let service = try makeService(storage: spy, writer: writer)
 
@@ -87,7 +87,7 @@ final class ClipClipboardServiceCopyTests: XCTestCase {
 
     func testMissingClipDoesNotWriteOrUpdate() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
-        let spy = ClipClipboardStorageServiceSpy(storage: storage)
+        let spy = ClipboardStorageServiceSpy(storage: storage)
         let writer = ClipboardWriterSpy()
         let service = try makeService(storage: spy, writer: writer)
         let id = UUID()
@@ -137,7 +137,7 @@ final class ClipClipboardServiceCopyTests: XCTestCase {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let clip = Clip(content: .text("복사한 뒤 삭제"))
         try await storage.insert(clip)
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, beforeUpdate: {
+        let spy = ClipboardStorageServiceSpy(storage: storage, beforeUpdate: {
             try await storage.delete(id: clip.id)
         })
         let writer = ClipboardWriterSpy()
@@ -157,7 +157,7 @@ final class ClipClipboardServiceCopyTests: XCTestCase {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let clip = Clip(content: .text("원문"))
         try await storage.insert(clip)
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, beforeUpdate: { throw ClipClipboardCopyTestError.unexpected })
+        let spy = ClipboardStorageServiceSpy(storage: storage, beforeUpdate: { throw ClipboardCopyTestError.unexpected })
         let writer = ClipboardWriterSpy()
         let service = try makeService(storage: spy, writer: writer)
 
@@ -181,7 +181,7 @@ final class ClipClipboardServiceCopyTests: XCTestCase {
         )
         try await storage.insert(clip)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, beforeUpdate: {
+        let spy = ClipboardStorageServiceSpy(storage: storage, beforeUpdate: {
             try await storage.delete(id: clip.id)
             try await storage.insert(replacement)
         })
@@ -206,7 +206,7 @@ final class ClipClipboardServiceCopyTests: XCTestCase {
         let clip = Clip(content: .text("편집 중인 원문"))
         try await storage.insert(clip)
         let details = ClipUpdate.details(name: "새 이름", memo: "새 메모", isPinned: true)
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, beforeUpdate: {
+        let spy = ClipboardStorageServiceSpy(storage: storage, beforeUpdate: {
             _ = try await storage.update(id: clip.id, change: details)
         })
         let writer = ClipboardWriterSpy()
@@ -226,10 +226,10 @@ final class ClipClipboardServiceCopyTests: XCTestCase {
     private func makeService(
         storage: any ClipStorageService,
         writer: any ClipboardWriter
-    ) throws -> ClipClipboardService {
+    ) throws -> ClipboardService {
         let files = try ClipImageFileStore(rootURL: directory.appendingPathComponent("images"))
         let images = ClipImageService(storage: storage, files: files)
-        return ClipClipboardService(
+        return ClipboardService(
             storage: storage,
             images: images,
             writer: writer
@@ -255,6 +255,6 @@ final class ClipClipboardServiceCopyTests: XCTestCase {
     }
 }
 
-private enum ClipClipboardCopyTestError: Error {
+private enum ClipboardCopyTestError: Error {
     case unexpected
 }

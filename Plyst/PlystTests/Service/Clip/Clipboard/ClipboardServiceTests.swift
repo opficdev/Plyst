@@ -1,5 +1,5 @@
 //
-//  ClipClipboardServiceTests.swift
+//  ClipboardServiceTests.swift
 //  PlystTests
 //
 //  Created by opfic on 9/29/26.
@@ -11,7 +11,7 @@ import XCTest
 @testable import Plyst
 
 @MainActor
-final class ClipClipboardServiceTests: XCTestCase {
+final class ClipboardServiceTests: XCTestCase {
     private let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Plyst-clipboard-\(UUID())", isDirectory: true)
     private var url: URL { directory.appendingPathComponent("clips.sqlite") }
 
@@ -66,11 +66,11 @@ final class ClipClipboardServiceTests: XCTestCase {
         let previous = Clip(content: .text("기존 기록"))
         try await storage.insert(previous)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage)
+        let spy = ClipboardStorageServiceSpy(storage: storage)
         let reader = ClipboardReaderSpy(result: .empty)
         let service = try makeService(storage: spy, reader: reader)
         let cases = [
-            (ClipboardReadResult.empty, ClipClipboardSaveResult.empty),
+            (ClipboardReadResult.empty, ClipboardSaveResult.empty),
             (.text(""), .empty),
             (.text("   "), .empty),
             (.text("\n\r\t "), .empty),
@@ -118,7 +118,7 @@ final class ClipClipboardServiceTests: XCTestCase {
         let previous = Clip(content: .text("기존 기록"))
         try await storage.insert(previous)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage)
+        let spy = ClipboardStorageServiceSpy(storage: storage)
         let reader = ClipboardReaderSpy(result: .text("실패한 기록"))
         let service = try makeService(storage: spy, reader: reader)
         try execute("""
@@ -144,7 +144,7 @@ final class ClipClipboardServiceTests: XCTestCase {
     func testCancellationBeforeReadingDoesNotReadInsertOrPublish() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage)
+        let spy = ClipboardStorageServiceSpy(storage: storage)
         let reader = ClipboardReaderSpy(result: .text("취소된 기록"))
         let service = try makeService(storage: spy, reader: reader)
         let task = Task {
@@ -170,7 +170,7 @@ final class ClipClipboardServiceTests: XCTestCase {
     func testCancellationDuringReadingPreventsInsertAndEvents() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage)
+        let spy = ClipboardStorageServiceSpy(storage: storage)
         let reader = ClipboardReaderSpy(result: .text("취소된 기록"), onRead: {
             withUnsafeCurrentTask { $0?.cancel() }
         })
@@ -195,7 +195,7 @@ final class ClipClipboardServiceTests: XCTestCase {
     func testStorageCancellationIsPropagatedWithoutRecordOrEvent() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, beforeInsert: { throw CancellationError() })
+        let spy = ClipboardStorageServiceSpy(storage: storage, beforeInsert: { throw CancellationError() })
         let reader = ClipboardReaderSpy(result: .text("취소된 기록"))
         let service = try makeService(storage: spy, reader: reader)
 
@@ -214,7 +214,7 @@ final class ClipClipboardServiceTests: XCTestCase {
     func testCancellationAfterCommitReturnsSavedRecord() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, afterInsert: {
+        let spy = ClipboardStorageServiceSpy(storage: storage, afterInsert: {
             withUnsafeCurrentTask { $0?.cancel() }
         })
         let reader = ClipboardReaderSpy(result: .text("확정된 기록"))
@@ -232,20 +232,20 @@ final class ClipClipboardServiceTests: XCTestCase {
     private func makeService(
         storage: any ClipStorageService,
         reader: any ClipboardReader
-    ) throws -> ClipClipboardService {
+    ) throws -> ClipboardService {
         let files = try ClipImageFileStore(rootURL: directory.appendingPathComponent("images", isDirectory: true))
         let images = ClipImageService(storage: storage, files: files)
-        return ClipClipboardService(
+        return ClipboardService(
             storage: storage,
             images: images,
             reader: reader
         )
     }
 
-    private func savedClip(_ result: ClipClipboardSaveResult) throws -> Clip {
+    private func savedClip(_ result: ClipboardSaveResult) throws -> Clip {
         guard case .saved(let clip) = result else {
             XCTFail("저장 성공 결과 누락")
-            throw ClipClipboardTestError.unexpectedResult
+            throw ClipboardTestError.unexpectedResult
         }
         return clip
     }
@@ -296,7 +296,7 @@ final class ClipboardReaderSpy: ClipboardReader {
     }
 }
 
-actor ClipClipboardStorageServiceSpy: ClipStorageService {
+actor ClipboardStorageServiceSpy: ClipStorageService {
     private let storage: SQLiteClipStorageService
     private let beforeInsert: @Sendable () throws -> Void
     private let afterInsert: @Sendable () -> Void
@@ -359,6 +359,6 @@ actor ClipClipboardStorageServiceSpy: ClipStorageService {
     }
 }
 
-private enum ClipClipboardTestError: Error {
+private enum ClipboardTestError: Error {
     case unexpectedResult
 }

@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "DFC00001306A4A9700115D10"
-               BuildableName = "PlystShareExtension.appex"
-               BlueprintName = "PlystShareExtension"
+               BuildableName = "ShareExtension.appex"
+               BlueprintName = "ShareExtension"
                ReferencedContainer = "container:Plyst.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -46,8 +46,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "DFC00001306A4A9700115D10"
-            BuildableName = "PlystShareExtension.appex"
-            BlueprintName = "PlystShareExtension"
+            BuildableName = "ShareExtension.appex"
+            BlueprintName = "ShareExtension"
             ReferencedContainer = "container:Plyst.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -63,8 +63,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "DFC00001306A4A9700115D10"
-            BuildableName = "PlystShareExtension.appex"
-            BlueprintName = "PlystShareExtension"
+            BuildableName = "ShareExtension.appex"
+            BlueprintName = "ShareExtension"
             ReferencedContainer = "container:Plyst.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

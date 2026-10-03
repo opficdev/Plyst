@@ -62,7 +62,7 @@ final class HomeReactorPinTests: XCTestCase {
     private func makeReactor(storage: SQLiteClipStorageService) throws -> HomeReactor {
         let files = try ClipImageFileStore(rootURL: directory.appendingPathComponent("images", isDirectory: true))
         let images = ClipImageService(storage: storage, files: files)
-        let clipboard = ClipClipboardService(
+        let clipboard = ClipboardService(
             storage: storage,
             images: images,
             reader: ClipboardReaderSpy(result: .empty)

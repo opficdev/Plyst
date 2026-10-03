@@ -6,6 +6,17 @@
 	<array>
 		<string>ko</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>opfic.Plyst</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>plyst</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

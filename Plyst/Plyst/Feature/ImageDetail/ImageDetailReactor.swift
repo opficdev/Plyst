@@ -30,7 +30,7 @@ final class ImageDetailReactor: Reactorable {
         case saveStarted
         case saved(Clip, UUID)
         case saveFailed(UUID)
-        case copyResult(ClipClipboardCopyResult, UUID)
+        case copyResult(ClipboardCopyResult, UUID)
         case copyFailed(UUID)
         case deleteStarted
         case deleteFailed(UUID)
@@ -109,14 +109,14 @@ final class ImageDetailReactor: Reactorable {
 
     private let clipID: Clip.ID
     private let storage: any ClipStorageService
-    private let clipboard: ClipClipboardService
+    private let clipboard: ClipboardService
     private let images: ClipImageService
     private let photos: ClipPhotoLibraryService
 
     init(
         clip: Clip,
         storage: any ClipStorageService,
-        clipboard: ClipClipboardService,
+        clipboard: ClipboardService,
         images: ClipImageService,
         photos: ClipPhotoLibraryService
     ) {

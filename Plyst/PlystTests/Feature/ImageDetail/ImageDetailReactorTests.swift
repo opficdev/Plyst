@@ -297,7 +297,7 @@ final class ImageDetailReactorTests: XCTestCase {
         ImageDetailReactor(
             clip: clip,
             storage: storage,
-            clipboard: ClipClipboardService(
+            clipboard: ClipboardService(
                 storage: storage,
                 images: images,
                 reader: ClipboardReaderSpy(result: .empty),

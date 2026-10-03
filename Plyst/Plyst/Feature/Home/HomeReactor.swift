@@ -35,7 +35,7 @@ final class HomeReactor: Reactorable {
         case timeChanged(Date)
         case savingStarted
         case savingStopped
-        case saveResult(ClipClipboardSaveResult, UUID)
+        case saveResult(ClipboardSaveResult, UUID)
         case saveFailed(UUID)
         case feedbackDismissed(UUID)
         case thumbnailStarted(HomeThumbnailKey)
@@ -44,7 +44,7 @@ final class HomeReactor: Reactorable {
         case thumbnailCancelled(HomeThumbnailKey)
         case filterSelected(HomeFilter)
         case pinFailed(UUID)
-        case copyResult(ClipClipboardCopyResult, UUID)
+        case copyResult(ClipboardCopyResult, UUID)
         case copyFailed(UUID)
         case deleteFailed(UUID)
     }
@@ -81,12 +81,12 @@ final class HomeReactor: Reactorable {
     let initialState = State()
 
     private let storage: any ClipStorageService
-    private let clipboard: ClipClipboardService
+    private let clipboard: ClipboardService
     private let images: ClipImageService
 
     init(
         storage: any ClipStorageService,
-        clipboard: ClipClipboardService,
+        clipboard: ClipboardService,
         images: ClipImageService
     ) {
         self.storage = storage

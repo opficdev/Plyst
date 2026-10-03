@@ -135,7 +135,7 @@ final class HomeReactorQuickActionTests: XCTestCase {
         images: ClipImageService,
         writer: ClipboardWriterSpy = ClipboardWriterSpy()
     ) -> HomeReactor {
-        let clipboard = ClipClipboardService(
+        let clipboard = ClipboardService(
             storage: storage,
             images: images,
             reader: ClipboardReaderSpy(result: .empty),
