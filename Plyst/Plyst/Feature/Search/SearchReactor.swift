@@ -34,7 +34,7 @@ final class SearchReactor: Reactorable {
         case searchHistoryLoaded(ClipSearchHistory)
         case searchHistoryLoadFailed
         case searchHistoryWriteFailed(UUID)
-        case copyResult(ClipClipboardCopyResult, UUID)
+        case copyResult(ClipboardCopyResult, UUID)
         case copyFailed(UUID)
         case feedbackDismissed(UUID)
         case thumbnailStarted(HomeThumbnailKey)
@@ -83,7 +83,7 @@ final class SearchReactor: Reactorable {
 
     private let storage: any ClipStorageService
     private let history: any ClipSearchHistoryStorageService
-    private let clipboard: ClipClipboardService
+    private let clipboard: ClipboardService
     private let images: ClipImageService
     /// 최근 검색어 쓰기를 넣은 순서대로 하나씩 실행하는 큐입니다. 응답이 요청과 다른 순서로 도착해 오래된 목록이 최신 목록을 덮어쓰지 않게 합니다.
     /// 원소는 mutate에서 만든 cold effect이며, 큐에는 메인 스레드에서만 넣습니다.
@@ -92,7 +92,7 @@ final class SearchReactor: Reactorable {
     init(
         storage: any ClipStorageService,
         history: any ClipSearchHistoryStorageService,
-        clipboard: ClipClipboardService,
+        clipboard: ClipboardService,
         images: ClipImageService
     ) {
         self.storage = storage

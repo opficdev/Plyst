@@ -132,7 +132,7 @@ final class ClipShareImportServiceTests: XCTestCase {
         try await inbox.insert(clip)
         let storage = try makeStorage()
         let shouldFail = OSAllocatedUnfairLock(initialState: true)
-        let spy = ClipClipboardStorageServiceSpy(
+        let spy = ClipboardStorageServiceSpy(
             storage: storage,
             beforeInsert: {
                 if shouldFail.withLock({ $0 }) { throw ClipStorageError.writeFailed }

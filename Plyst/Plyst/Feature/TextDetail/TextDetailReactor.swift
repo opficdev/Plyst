@@ -30,7 +30,7 @@ final class TextDetailReactor: Reactorable {
         case saveStarted
         case saved(Clip, UUID)
         case saveFailed(UUID)
-        case copyResult(ClipClipboardCopyResult, UUID)
+        case copyResult(ClipboardCopyResult, UUID)
         case copyFailed(UUID)
         case deleteStarted
         case deleteFailed(UUID)
@@ -110,12 +110,12 @@ final class TextDetailReactor: Reactorable {
 
     private let clipID: Clip.ID
     private let storage: any ClipStorageService
-    private let clipboard: ClipClipboardService
+    private let clipboard: ClipboardService
 
     init(
         clip: Clip,
         storage: any ClipStorageService,
-        clipboard: ClipClipboardService
+        clipboard: ClipboardService
     ) {
         initialState = State(clip: clip)
         clipID = clip.id

@@ -1,5 +1,5 @@
 //
-//  ClipClipboardService.swift
+//  ClipboardService.swift
 //  Plyst
 //
 //  Created by opfic on 9/29/26.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum ClipClipboardSaveResult: Equatable, Sendable {
+enum ClipboardSaveResult: Equatable, Sendable {
     case saved(Clip)
     /// 이미지 원본과 클립 기록은 저장됐지만 pending 표시 파일을 제거하지 못했습니다.
     /// recoverPendingCleanup()을 호출해야 정리를 다시 시도합니다.
@@ -21,7 +21,7 @@ enum ClipClipboardSaveResult: Equatable, Sendable {
 /// 사용자 요청에 따라 클립을 저장하거나 다시 복사합니다. 초기화 시에는 클립보드에 접근하지 않습니다.
 /// storage와 images는 같은 저장소를 사용해야 합니다.
 /// 같은 클립보드를 사용하는 호출부는 이 서비스 하나와 이미지 루트별 ClipImageService 하나를 공유해야 합니다.
-actor ClipClipboardService {
+actor ClipboardService {
     private let storage: any ClipStorageService
     private let images: ClipImageService
     private let reader: any ClipboardReader
@@ -42,7 +42,7 @@ actor ClipClipboardService {
     }
 
     /// 저장소 오류와 CancellationError는 그대로 전파합니다. 저장 확정 이후에는 취소를 다시 확인하지 않습니다.
-    func saveCurrentClipboard() async throws -> ClipClipboardSaveResult {
+    func saveCurrentClipboard() async throws -> ClipboardSaveResult {
         try await acquire()
         defer { release() }
         switch try await reader.read() {
@@ -83,7 +83,7 @@ actor ClipClipboardService {
     }
 
     /// 쓰기 전 오류는 전파합니다. 쓰기가 확인된 이후의 사용 시각 저장 실패는 부분 성공으로 반환합니다.
-    func copy(id: Clip.ID) async throws -> ClipClipboardCopyResult {
+    func copy(id: Clip.ID) async throws -> ClipboardCopyResult {
         try await acquire()
         defer { release() }
         guard let clip = try await storage.fetch(id: id) else { throw ClipStorageError.notFound(id) }
@@ -105,7 +105,7 @@ actor ClipClipboardService {
             // 갱신 확정 뒤 발생한 취소로 완료된 복사와 사용 기록을 숨기지 않습니다.
             return .copied(updated)
         } catch {
-            let failure: ClipClipboardUsageUpdateFailure
+            let failure: ClipboardUsageUpdateFailure
             if error is CancellationError {
                 failure = .cancelled
             } else if let error = error as? ClipStorageError {

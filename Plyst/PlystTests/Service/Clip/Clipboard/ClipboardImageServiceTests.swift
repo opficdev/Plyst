@@ -1,5 +1,5 @@
 //
-//  ClipClipboardImageServiceTests.swift
+//  ClipboardImageServiceTests.swift
 //  PlystTests
 //
 //  Created by opfic on 9/29/26.
@@ -11,7 +11,7 @@ import XCTest
 @testable import Plyst
 
 @MainActor
-final class ClipClipboardImageServiceTests: XCTestCase {
+final class ClipboardImageServiceTests: XCTestCase {
     private let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Plyst-clipboard-image-\(UUID())", isDirectory: true)
     private var url: URL { directory.appendingPathComponent("clips.sqlite") }
     private var root: URL { directory.appendingPathComponent("images", isDirectory: true) }
@@ -83,7 +83,7 @@ final class ClipClipboardImageServiceTests: XCTestCase {
         let previous = Clip(content: .text("기존 기록"))
         try await storage.insert(previous)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage)
+        let spy = ClipboardStorageServiceSpy(storage: storage)
         let reader = ClipboardReaderSpy(result: .image(Data()))
         let service = try makeService(storage: spy, reader: reader)
         let png = try ClipImageTestFixture.data()
@@ -108,7 +108,7 @@ final class ClipClipboardImageServiceTests: XCTestCase {
     func testFileWriteFailureDoesNotInsertOrPublish() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage)
+        let spy = ClipboardStorageServiceSpy(storage: storage)
         let reader = ClipboardReaderSpy(result: .image(try ClipImageTestFixture.data()))
         let service = try makeService(storage: spy, reader: reader)
         try ClipImageFileSystemTestFixture.makeReadOnly(root)
@@ -132,7 +132,7 @@ final class ClipClipboardImageServiceTests: XCTestCase {
         let previous = Clip(content: .text("기존 기록"))
         try await storage.insert(previous)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, beforeInsert: { throw ClipStorageError.writeFailed })
+        let spy = ClipboardStorageServiceSpy(storage: storage, beforeInsert: { throw ClipStorageError.writeFailed })
         let reader = ClipboardReaderSpy(result: .image(try ClipImageTestFixture.data()))
         let service = try makeService(storage: spy, reader: reader)
 
@@ -153,7 +153,7 @@ final class ClipClipboardImageServiceTests: XCTestCase {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let stream = await storage.changes()
         let root = self.root
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, beforeInsert: {
+        let spy = ClipboardStorageServiceSpy(storage: storage, beforeInsert: {
             let entries = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
             try ClipImageFileSystemTestFixture.makeReadOnly(XCTUnwrap(entries.first))
             throw ClipStorageError.writeFailed
@@ -162,7 +162,7 @@ final class ClipClipboardImageServiceTests: XCTestCase {
         let images = ClipImageService(storage: spy, files: files)
         let data = try ClipImageTestFixture.data()
         let reader = ClipboardReaderSpy(result: .image(data))
-        let service = ClipClipboardService(
+        let service = ClipboardService(
             storage: spy,
             images: images,
             reader: reader
@@ -192,7 +192,7 @@ final class ClipClipboardImageServiceTests: XCTestCase {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let stream = await storage.changes()
         let root = self.root
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, beforeInsert: {
+        let spy = ClipboardStorageServiceSpy(storage: storage, beforeInsert: {
             let entries = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
             try ClipImageFileSystemTestFixture.makeReadOnly(XCTUnwrap(entries.first))
         })
@@ -200,7 +200,7 @@ final class ClipClipboardImageServiceTests: XCTestCase {
         let images = ClipImageService(storage: spy, files: files)
         let data = try ClipImageTestFixture.data()
         let reader = ClipboardReaderSpy(result: .image(data))
-        let service = ClipClipboardService(
+        let service = ClipboardService(
             storage: spy,
             images: images,
             reader: reader
@@ -273,7 +273,7 @@ final class ClipClipboardImageServiceTests: XCTestCase {
     func testMetadataCancellationCleansOriginalWithoutPublishing() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, beforeInsert: { throw CancellationError() })
+        let spy = ClipboardStorageServiceSpy(storage: storage, beforeInsert: { throw CancellationError() })
         let reader = ClipboardReaderSpy(result: .image(try ClipImageTestFixture.data()))
         let service = try makeService(storage: spy, reader: reader)
 
@@ -293,7 +293,7 @@ final class ClipClipboardImageServiceTests: XCTestCase {
     func testCancellationAfterCommitReturnsSavedImage() async throws {
         let storage = try SQLiteClipStorageService(databaseURL: url)
         let stream = await storage.changes()
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, afterInsert: {
+        let spy = ClipboardStorageServiceSpy(storage: storage, afterInsert: {
             withUnsafeCurrentTask { $0?.cancel() }
         })
         let data = try ClipImageTestFixture.data()
@@ -315,17 +315,17 @@ final class ClipClipboardImageServiceTests: XCTestCase {
     private func makeService(
         storage: any ClipStorageService,
         reader: any ClipboardReader
-    ) throws -> ClipClipboardService {
+    ) throws -> ClipboardService {
         let files = try ClipImageFileStore(rootURL: root)
         let images = ClipImageService(storage: storage, files: files)
-        return ClipClipboardService(
+        return ClipboardService(
             storage: storage,
             images: images,
             reader: reader
         )
     }
 
-    private func savedClip(_ result: ClipClipboardSaveResult) throws -> Clip {
+    private func savedClip(_ result: ClipboardSaveResult) throws -> Clip {
         guard case .saved(let clip) = result else {
             XCTFail("이미지 저장 성공 결과 누락")
             throw ClipStorageError.invalidContent

@@ -1,5 +1,5 @@
 //
-//  ClipClipboardImageCopyTests.swift
+//  ClipboardImageCopyTests.swift
 //  PlystTests
 //
 //  Created by opfic on 9/30/26.
@@ -11,7 +11,7 @@ import XCTest
 @testable import Plyst
 
 @MainActor
-final class ClipClipboardImageCopyTests: XCTestCase {
+final class ClipboardImageCopyTests: XCTestCase {
     private let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Plyst-image-copy-\(UUID())", isDirectory: true)
     private var root: URL { directory.appendingPathComponent("images") }
     private var url: URL { directory.appendingPathComponent("clips.sqlite") }
@@ -26,7 +26,7 @@ final class ClipClipboardImageCopyTests: XCTestCase {
         let files = try ClipImageFileStore(rootURL: root)
         let images = ClipImageService(storage: storage, files: files)
         let writer = ClipboardWriterSpy()
-        let service = ClipClipboardService(
+        let service = ClipboardService(
             storage: storage,
             images: images,
             writer: writer
@@ -65,7 +65,7 @@ final class ClipClipboardImageCopyTests: XCTestCase {
         let clip = saved.value
         let image = try metadata(in: clip)
         let writer = ClipboardWriterSpy()
-        let service = ClipClipboardService(
+        let service = ClipboardService(
             storage: storage,
             images: images,
             writer: writer
@@ -93,7 +93,7 @@ final class ClipClipboardImageCopyTests: XCTestCase {
         let original = root.appendingPathComponent(image.fileID.uuidString).appendingPathComponent("original")
         try corrupted.write(to: original)
         let writer = ClipboardWriterSpy()
-        let service = ClipClipboardService(
+        let service = ClipboardService(
             storage: storage,
             images: images,
             writer: writer
@@ -118,12 +118,12 @@ final class ClipClipboardImageCopyTests: XCTestCase {
         let clip = saved.value
         let image = try metadata(in: clip)
         let replacement = try ClipImageTestFixture.data(type: UTType.jpeg.identifier)
-        let spy = ClipClipboardStorageServiceSpy(storage: storage, afterFetch: {
+        let spy = ClipboardStorageServiceSpy(storage: storage, afterFetch: {
             _ = try await images.delete(id: clip.id)
             _ = try await images.saveImage(replacement, id: clip.id)
         })
         let writer = ClipboardWriterSpy()
-        let service = ClipClipboardService(
+        let service = ClipboardService(
             storage: spy,
             images: images,
             writer: writer
