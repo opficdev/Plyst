@@ -30,7 +30,7 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
         self?.reactor.action.onNext(.timeChanged(now))
     }
 
-    private let makeSearchView: @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewLike
+    private let makeSearchView: @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewLike & ClipGridLike
     private let makeDetailViewController: @MainActor (Clip) -> UIViewController
     private let cancel: @MainActor () -> Void
 
@@ -51,7 +51,7 @@ final class SearchViewController: ReactorViewController<SearchReactor> {
     /// 취소 동작은 내비게이션 스택에 의존하지 않고 표시한 쪽이 넘긴 cancel로 전달한다.
     init(
         reactor: SearchReactor,
-        makeSearchView: @escaping @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewLike,
+        makeSearchView: @escaping @MainActor (@escaping @MainActor (SearchViewAction) -> Void) -> any SearchViewLike & ClipGridLike,
         makeDetailViewController: @escaping @MainActor (Clip) -> UIViewController,
         cancel: @escaping @MainActor () -> Void
     ) {

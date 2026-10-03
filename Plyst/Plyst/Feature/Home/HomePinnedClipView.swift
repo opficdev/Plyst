@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class HomePinnedClipView: UIView {
+final class HomePinnedClipView: UIView, ClipCardLike {
     static let width = CGFloat(252)
     static let height = CGFloat(76)
     static let thumbnailDimension = CGFloat(56)
@@ -15,15 +15,15 @@ final class HomePinnedClipView: UIView {
     private static let nameFont = UIFont.systemFont(ofSize: 13, weight: .semibold)
     private static let metadataFont = UIFont.monospacedSystemFont(ofSize: 9.5, weight: .medium)
 
-    private let card = UIView()
+    let card = UIView()
     private let visualBox = UIView()
     private let thumbnailView = UIImageView()
     private let quote = UILabel()
     private let linkIcon = UIImageView()
-    private let name = UILabel()
-    private let metadata = UILabel()
+    let name = UILabel()
+    let metadata = UILabel()
     private lazy var textStack = UIStackView(arrangedSubviews: [name, metadata])
-    private let copyButton = HomeCopyButton()
+    let copyButton: UIButton = HomeCopyButton()
     private var onCopy: (() -> Void)?
 
     private(set) var representedKey: HomeThumbnailKey?

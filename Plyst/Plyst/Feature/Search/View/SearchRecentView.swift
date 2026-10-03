@@ -8,10 +8,10 @@
 import UIKit
 
 /// 검색어가 없을 때 보이는 최근 검색어 영역입니다.
-final class SearchRecentView: UIView {
-    private let title = UILabel()
+final class SearchRecentView: UIView, SectionTitleLike {
+    let title = UILabel()
     private let clearButton = UIButton(type: .system)
-    private let rule = UIView()
+    let rule = UIView()
     private let scrollView = UIScrollView()
     private let chips = UIStackView()
     private let message = UILabel()
@@ -141,12 +141,12 @@ final class SearchRecentView: UIView {
 }
 
 /// 검색어를 다시 선택하거나 하나만 삭제할 수 있는 칩입니다.
-private final class SearchTermChipView: UIView {
+private final class SearchTermChipView: UIView, SearchTermChipLike {
     var onSelect: (() -> Void)?
     var onRemove: (() -> Void)?
 
-    private let termButton = UIButton(type: .system)
-    private let removeButton = UIButton(type: .system)
+    let termButton = UIButton(type: .system)
+    let removeButton = UIButton(type: .system)
     private lazy var row = UIStackView(arrangedSubviews: [termButton, removeButton])
 
     init(term: String) {

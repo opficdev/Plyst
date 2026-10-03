@@ -12,7 +12,7 @@ import UIKit
 @MainActor
 final class ImageDetailViewController: ReactorViewController<ImageDetailReactor> {
     private lazy var detailView = makeImageDetailView(makeSend())
-    private let makeImageDetailView: @MainActor (@escaping @MainActor (ImageDetailViewAction) -> Void) -> any ImageDetailViewLike
+    private let makeImageDetailView: @MainActor (@escaping @MainActor (ImageDetailViewAction) -> Void) -> any ImageDetailViewLike & ClipDetailLike
     private lazy var feedbackPresenter = FeedbackPresenter(
         host: detailView,
         topAnchor: detailView.feedbackTopAnchor,
@@ -26,7 +26,7 @@ final class ImageDetailViewController: ReactorViewController<ImageDetailReactor>
 
     init(
         reactor: ImageDetailReactor,
-        makeImageDetailView: @escaping @MainActor (@escaping @MainActor (ImageDetailViewAction) -> Void) -> any ImageDetailViewLike
+        makeImageDetailView: @escaping @MainActor (@escaping @MainActor (ImageDetailViewAction) -> Void) -> any ImageDetailViewLike & ClipDetailLike
     ) {
         self.makeImageDetailView = makeImageDetailView
         super.init(reactor: reactor)

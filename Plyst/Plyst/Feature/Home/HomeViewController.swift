@@ -28,7 +28,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
         topInset: 12,
         dismiss: { [weak self] in self?.reactor.action.onNext(.dismissFeedback($0)) }
     )
-    private let makeHomeView: @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewLike
+    private let makeHomeView: @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewLike & ClipGridLike
     private let makeSearchViewController: @MainActor (@escaping @MainActor () -> Void) -> UIViewController
     let makeDetailViewController: @MainActor (Clip) -> UIViewController
     private var searchViewController: UIViewController?
@@ -38,7 +38,7 @@ final class HomeViewController: ReactorViewController<HomeReactor> {
 
     init(
         reactor: HomeReactor,
-        makeHomeView: @escaping @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewLike,
+        makeHomeView: @escaping @MainActor (@escaping @MainActor (HomeViewAction) -> Void) -> any HomeViewLike & ClipGridLike,
         makeSearchViewController: @escaping @MainActor (@escaping @MainActor () -> Void) -> UIViewController,
         makeDetailViewController: @escaping @MainActor (Clip) -> UIViewController
     ) {

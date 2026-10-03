@@ -14,7 +14,7 @@ import UIKit
 @MainActor
 final class TextDetailViewController: ReactorViewController<TextDetailReactor> {
     private lazy var detailView = makeTextDetailView(makeSend())
-    private let makeTextDetailView: @MainActor (@escaping @MainActor (TextDetailViewAction) -> Void) -> any TextDetailViewLike
+    private let makeTextDetailView: @MainActor (@escaping @MainActor (TextDetailViewAction) -> Void) -> any TextDetailViewLike & ClipDetailLike
     /// 처음 나타날 때 이름 입력에 초점을 줄지 여부입니다.
     private let focusesName: Bool
     private lazy var feedbackPresenter = FeedbackPresenter(
@@ -28,7 +28,7 @@ final class TextDetailViewController: ReactorViewController<TextDetailReactor> {
 
     init(
         reactor: TextDetailReactor,
-        makeTextDetailView: @escaping @MainActor (@escaping @MainActor (TextDetailViewAction) -> Void) -> any TextDetailViewLike,
+        makeTextDetailView: @escaping @MainActor (@escaping @MainActor (TextDetailViewAction) -> Void) -> any TextDetailViewLike & ClipDetailLike,
         focusesName: Bool = false
     ) {
         self.makeTextDetailView = makeTextDetailView

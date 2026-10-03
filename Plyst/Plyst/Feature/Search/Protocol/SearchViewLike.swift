@@ -10,10 +10,9 @@ import UIKit
 @MainActor
 protocol SearchViewLike: UIView {
     var layout: HomeGridLayout { get }
-    var collectionView: UICollectionView { get }
-    var textCellType: any HomeTextCellLike.Type { get }
-    var imageCellType: any HomeImageCellLike.Type { get }
-    var sectionHeaderType: any HomeSectionHeaderViewLike.Type { get }
+    var textCellType: any (HomeTextCellLike & ClipCardLike).Type { get }
+    var imageCellType: any (HomeImageCellLike & ClipCardLike).Type { get }
+    var sectionHeaderType: any (HomeSectionHeaderViewLike & SectionTitleLike).Type { get }
 
     func focusSearchField()
     func expand()

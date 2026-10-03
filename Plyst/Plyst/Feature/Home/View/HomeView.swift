@@ -8,7 +8,7 @@
 import UIKit
 
 @MainActor
-final class HomeView: UIView, HomeViewLike {
+final class HomeView: UIView, HomeViewLike, ClipGridLike {
     private static let saveIcon = UIGraphicsImageRenderer(size: CGSize(width: 18, height: 18)).image { _ in
         UIColor.black.setStroke()
         let board = UIBezierPath(roundedRect: CGRect(x: 3.5, y: 3, width: 11, height: 13), cornerRadius: 2.5)
@@ -76,10 +76,10 @@ final class HomeView: UIView, HomeViewLike {
         updateScrollGeometry()
     }
 
-    var textCellType: any HomeTextCellLike.Type { HomeTextCell.self }
-    var imageCellType: any HomeImageCellLike.Type { HomeImageCell.self }
-    var sectionHeaderType: any HomeSectionHeaderViewLike.Type { HomeSectionHeaderView.self }
-    var pinnedRowType: any HomePinnedRowViewLike.Type { HomePinnedRowView.self }
+    var textCellType: any (HomeTextCellLike & ClipCardLike).Type { HomeTextCell.self }
+    var imageCellType: any (HomeImageCellLike & ClipCardLike).Type { HomeImageCell.self }
+    var sectionHeaderType: any (HomeSectionHeaderViewLike & SectionTitleLike).Type { HomeSectionHeaderView.self }
+    var pinnedRowType: any (HomePinnedRowViewLike & SectionTitleLike).Type { HomePinnedRowView.self }
 
     func reloadContent() {
         let wasUpdating = isUpdatingScrollGeometry

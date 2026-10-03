@@ -8,27 +8,27 @@
 import UIKit
 
 @MainActor
-final class ImageDetailView: UIView, ImageDetailViewLike {
+final class ImageDetailView: UIView, ImageDetailViewLike, ClipDetailLike {
     private let topBar = UIView()
-    private let closeButton = DetailBarButton(style: .icon("xmark"))
-    private let titleLabel = UILabel()
-    private let saveButton = DetailBarButton(style: .title("저장"))
+    let closeButton: UIButton = DetailBarButton(style: .icon("xmark"))
+    let titleLabel = UILabel()
+    let saveButton: UIButton = DetailBarButton(style: .title("저장"))
     private let scrollView = UIScrollView()
     private let contentStack = UIStackView()
-    private let card = UIView()
-    private let metaLabel = UILabel()
+    let card = UIView()
+    let metaLabel = UILabel()
     private let imageView = UIImageView()
     private let previewMessage = UILabel()
     private let photoButton = UIButton(type: .system)
     private let fieldsStack = UIStackView()
     private let nameRow = UIStackView()
     private let nameLabel = UILabel()
-    private let nameField = UITextField()
+    let nameField = UITextField()
     private let pinRow = UIStackView()
-    private let pinLabel = UILabel()
-    private let pinSwitch = UISwitch()
-    private let datesView = ClipDetailDatesView()
-    private lazy var actionBar = ClipDetailActionBarView(
+    let pinLabel = UILabel()
+    let pinSwitch = UISwitch()
+    let datesView = ClipDetailDatesView()
+    lazy var actionBar = ClipDetailActionBarView(
         copy: { [weak self] in self?.send(.copy) },
         delete: { [weak self] in self?.send(.delete) }
     )

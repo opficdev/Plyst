@@ -10,11 +10,10 @@ import UIKit
 @MainActor
 protocol HomeViewLike: UIView {
     var layout: HomeGridLayout { get }
-    var collectionView: UICollectionView { get }
-    var textCellType: any HomeTextCellLike.Type { get }
-    var imageCellType: any HomeImageCellLike.Type { get }
-    var sectionHeaderType: any HomeSectionHeaderViewLike.Type { get }
-    var pinnedRowType: any HomePinnedRowViewLike.Type { get }
+    var textCellType: any (HomeTextCellLike & ClipCardLike).Type { get }
+    var imageCellType: any (HomeImageCellLike & ClipCardLike).Type { get }
+    var sectionHeaderType: any (HomeSectionHeaderViewLike & SectionTitleLike).Type { get }
+    var pinnedRowType: any (HomePinnedRowViewLike & SectionTitleLike).Type { get }
 
     func reloadContent()
     func updateScrollPosition(_ offset: CGFloat)
