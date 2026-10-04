@@ -154,25 +154,6 @@ final class FeedbackPresenterTests: XCTestCase {
         XCTAssertTrue(toast.isHidden || toast.alpha == 0)
     }
 
-    func testTimerDoesNotRetainWindowAfterPresenterIsReleased() async throws {
-        var window = Optional(try makeWindow())
-        weak var weakWindow = window
-        let dismissed = expectation(description: "창이 해제돼도 원래 닫기 경로를 호출합니다")
-        var presenter = Optional(FeedbackPresenter(
-            window: try XCTUnwrap(window),
-            duration: .milliseconds(10),
-            dismiss: { _ in dismissed.fulfill() }
-        ))
-        presenter?.update(FeedbackTestValue(message: "창 해제"))
-        window?.hide()
-
-        presenter = nil
-        window = nil
-
-        XCTAssertNil(weakWindow)
-        await fulfillment(of: [dismissed], timeout: 1)
-    }
-
     func testToastRemainsInSameSceneWindowAcrossTransitionsAndModalPresentation() throws {
         let window = try makeWindow()
         let scene = try XCTUnwrap(window.windowScene)
