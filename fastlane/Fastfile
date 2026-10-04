@@ -255,6 +255,8 @@ platform :ios do
     api_key = asc_api_key
     match_force = ENV.fetch("MATCH_FORCE", "false") == "true"
 
+    setup_ci if ENV["CI"]
+
     match(
       api_key: api_key,
       type: "appstore",
