@@ -17,20 +17,21 @@ final class TextDetailViewController: ReactorViewController<TextDetailReactor> {
     private let makeTextDetailView: @MainActor (@escaping @MainActor (TextDetailViewAction) -> Void) -> any TextDetailViewLike & ClipDetailLike
     /// 처음 나타날 때 이름 입력에 초점을 줄지 여부입니다.
     private let focusesName: Bool
+    private let toastWindow: ToastWindow
     private lazy var feedbackPresenter = FeedbackPresenter(
-        host: detailView,
-        topAnchor: detailView.feedbackTopAnchor,
-        topInset: 8,
-        dismiss: { [weak self] in self?.reactor.action.onNext(.dismissFeedback($0)) }
+        window: toastWindow,
+        dismiss: { [reactor] in reactor.action.onNext(.dismissFeedback($0)) }
     )
     private var didFocusName = false
     private var didClose = false
 
     init(
         reactor: TextDetailReactor,
+        toastWindow: ToastWindow,
         makeTextDetailView: @escaping @MainActor (@escaping @MainActor (TextDetailViewAction) -> Void) -> any TextDetailViewLike & ClipDetailLike,
         focusesName: Bool = false
     ) {
+        self.toastWindow = toastWindow
         self.makeTextDetailView = makeTextDetailView
         self.focusesName = focusesName
         super.init(reactor: reactor)

@@ -17,6 +17,7 @@ final class HomeSceneComposition {
         category: String(describing: HomeSceneComposition.self)
     )
 
+    private let toastWindow: ToastWindow
     private let storage: SQLiteClipStorageService
     private let images: ClipImageService
     private let clipboard: ClipboardService
@@ -30,7 +31,8 @@ final class HomeSceneComposition {
         importTask?.cancel()
     }
 
-    init() throws {
+    init(toastWindow: ToastWindow) throws {
+        self.toastWindow = toastWindow
         var directory = try FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
@@ -74,7 +76,7 @@ final class HomeSceneComposition {
 
     func makeRootViewController() -> UIViewController {
         // 상세 화면은 같은 저장소와 서비스 인스턴스를 공유합니다.
-        let makeDetail: @MainActor (Clip) -> UIViewController = { [storage, clipboard, images, photos] clip in
+        let makeDetail: @MainActor (Clip) -> UIViewController = { [storage, clipboard, images, photos, toastWindow] clip in
             switch clip.content {
             case .text:
                 TextDetailViewController(
@@ -83,6 +85,7 @@ final class HomeSceneComposition {
                         storage: storage,
                         clipboard: clipboard
                     ),
+                    toastWindow: toastWindow,
                     makeTextDetailView: { TextDetailView(frame: .zero, send: $0) }
                 )
             case .image:
@@ -94,6 +97,7 @@ final class HomeSceneComposition {
                         images: images,
                         photos: photos
                     ),
+                    toastWindow: toastWindow,
                     makeImageDetailView: { ImageDetailView(frame: .zero, send: $0) }
                 )
             }
@@ -103,11 +107,12 @@ final class HomeSceneComposition {
             clipboard: clipboard,
             images: images
         )
-        // 검색 화면은 같은 저장소와 서비스 인스턴스를 공유합니다. 클로저는 Composition이 아니라 서비스만 캡처합니다.
+        // 검색 화면은 같은 저장소와 서비스 및 토스트 창을 공유합니다. 클로저는 Composition을 캡처하지 않습니다.
         let controller = HomeViewController(
             reactor: reactor,
+            toastWindow: toastWindow,
             makeHomeView: { HomeView(frame: .zero, send: $0) },
-            makeSearchViewController: { [storage, clipboard, images, makeDetail] cancel in
+            makeSearchViewController: { [storage, clipboard, images, makeDetail, toastWindow] cancel in
                 SearchViewController(
                     reactor: SearchReactor(
                         storage: storage,
@@ -115,6 +120,7 @@ final class HomeSceneComposition {
                         clipboard: clipboard,
                         images: images
                     ),
+                    toastWindow: toastWindow,
                     makeSearchView: { SearchView(frame: .zero, send: $0) },
                     makeDetailViewController: makeDetail,
                     cancel: cancel

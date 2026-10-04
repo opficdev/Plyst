@@ -107,8 +107,6 @@ final class ImageDetailView: UIView, ImageDetailViewLike, ClipDetailLike {
         updatePhotoButton()
     }
 
-    var feedbackTopAnchor: NSLayoutYAxisAnchor { topBar.bottomAnchor }
-
     private func configureAppearance() {
         backgroundColor = UIColor(resource: .homeCanvas)
         titleLabel.text = "이미지"

@@ -26,5 +26,4 @@ protocol ImageDetailViewLike: UIView {
     func setSaveEnabled(_ isEnabled: Bool)
     func setBusy(_ isBusy: Bool)
     func setSavingToPhotos(_ isSaving: Bool)
-    var feedbackTopAnchor: NSLayoutYAxisAnchor { get }
 }
