@@ -16,14 +16,20 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     )
 
     var window: UIWindow?
+    private var toastWindow: ToastWindow?
     private var composition: HomeSceneComposition?
     private var isClipboardSaveRequested = false
 
-    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+    func scene(
+        _ scene: UIScene,
+        willConnectTo session: UISceneSession,
+        options connectionOptions: UIScene.ConnectionOptions
+    ) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         let window = UIWindow(windowScene: windowScene)
         self.window = window
+        toastWindow = ToastWindow(windowScene: windowScene)
         configureRoot(in: window)
         window.makeKeyAndVisible()
         request(from: connectionOptions.urlContexts)
@@ -43,6 +49,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
+        toastWindow?.hide()
+        toastWindow = nil
         window = nil
         composition = nil
     }
@@ -62,8 +70,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     private func configureRoot(in window: UIWindow) {
+        guard let toastWindow else { return }
         do {
-            let composition = try HomeSceneComposition()
+            let composition = try HomeSceneComposition(toastWindow: toastWindow)
             let root = composition.makeRootViewController()
             self.composition = composition
             window.rootViewController = root

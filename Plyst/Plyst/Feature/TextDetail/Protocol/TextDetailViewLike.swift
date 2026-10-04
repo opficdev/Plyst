@@ -29,7 +29,4 @@ protocol TextDetailViewLike: UIView {
     func setSaveEnabled(_ isEnabled: Bool)
     func setBusy(_ isBusy: Bool)
     func focusName()
-
-    /// 피드백 토스트를 이 앵커 아래에 배치합니다.
-    var feedbackTopAnchor: NSLayoutYAxisAnchor { get }
 }

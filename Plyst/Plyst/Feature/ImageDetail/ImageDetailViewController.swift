@@ -13,11 +13,10 @@ import UIKit
 final class ImageDetailViewController: ReactorViewController<ImageDetailReactor> {
     private lazy var detailView = makeImageDetailView(makeSend())
     private let makeImageDetailView: @MainActor (@escaping @MainActor (ImageDetailViewAction) -> Void) -> any ImageDetailViewLike & ClipDetailLike
+    private let toastWindow: ToastWindow
     private lazy var feedbackPresenter = FeedbackPresenter(
-        host: detailView,
-        topAnchor: detailView.feedbackTopAnchor,
-        topInset: 8,
-        dismiss: { [weak self] in self?.reactor.action.onNext(.dismissFeedback($0)) }
+        window: toastWindow,
+        dismiss: { [reactor] in reactor.action.onNext(.dismissFeedback($0)) }
     )
     private var requestedImage: ClipImageMetadata?
     private var renderedData: Data?
@@ -26,8 +25,10 @@ final class ImageDetailViewController: ReactorViewController<ImageDetailReactor>
 
     init(
         reactor: ImageDetailReactor,
+        toastWindow: ToastWindow,
         makeImageDetailView: @escaping @MainActor (@escaping @MainActor (ImageDetailViewAction) -> Void) -> any ImageDetailViewLike & ClipDetailLike
     ) {
+        self.toastWindow = toastWindow
         self.makeImageDetailView = makeImageDetailView
         super.init(reactor: reactor)
         modalPresentationStyle = .pageSheet

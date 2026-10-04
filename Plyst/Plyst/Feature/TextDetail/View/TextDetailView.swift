@@ -103,10 +103,6 @@ final class TextDetailView: UIView, TextDetailViewLike, ClipDetailLike {
         nameField.becomeFirstResponder()
     }
 
-    var feedbackTopAnchor: NSLayoutYAxisAnchor {
-        topBar.bottomAnchor
-    }
-
     private static func makeCaption(_ text: String) -> UILabel {
         let label = UILabel()
         label.attributedText = NSAttributedString(
