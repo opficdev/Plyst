@@ -9,7 +9,7 @@ app_identifier([
   "opfic.Plyst.WidgetExtension"
 ])
 team_id(ENV["APP_STORE_TEAM_ID"])
-readonly(ENV["CI"] == "true")
+readonly(true)
 
 if ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
   git_basic_authorization(ENV["MATCH_GIT_BASIC_AUTHORIZATION"])
