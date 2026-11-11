@@ -55,7 +55,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_FILES: repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files
         run: |
-          files=$(gh api --paginate "$PR_FILES" --jq '.[].filename')
+          # 이름이 바뀐 파일은 이전 경로도 검사합니다.
+          files=$(gh api --paginate "$PR_FILES" --jq '.[] | .filename, (.previous_filename // empty)')
           if [ -z "$files" ] || printf '%s\n' "$files" | grep -qvE '\.md$|^docs/|^\.githooks/|^fastlane/|^Gemfile(\.lock)?$|^scripts/'; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
