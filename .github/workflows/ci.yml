@@ -1,14 +1,73 @@
 name: iOS CI
 
+# develop 푸시는 PR이 읽을 캐시를 만드는 실행입니다.
 on:
   pull_request:
+  push:
+    branches:
+      - develop
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.githooks/**'
+      - 'fastlane/**'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - 'scripts/**'
+
+# 같은 PR이나 브랜치에 새 푸시가 오면 진행 중인 앞 실행을 취소합니다.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
+# 시뮬레이터 x86_64 슬라이스는 CI에서 만들지 않습니다.
+# 컴파일 결과는 러너 임시 폴더의 CAS에 캐시합니다.
+env:
+  BUILD_FLAGS: >-
+    -skipMacroValidation
+    -skipPackageUpdates
+    -disableAutomaticPackageResolution
+    ARCHS=arm64
+    COMPILATION_CACHE_ENABLE_CACHING=YES
+    SWIFT_ENABLE_EXPLICIT_MODULES=YES
+    COMPILER_INDEX_STORE_ENABLE=NO
+
 jobs:
+  # CI가 실행하지 않는 파일만 바뀐 PR은 SwiftLint, Build, Test를 건너뜁니다.
+  # 건너뛴 필수 체크는 통과로 처리되므로 트리거 경로 조건 대신 잡 조건을 씁니다.
+  # macOS 동시 실행 수를 아끼려고 Linux에서 실행합니다.
+  changes:
+    name: Changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Detect code changes
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_FILES: repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files
+        run: |
+          # 이름이 바뀐 파일은 이전 경로도 검사합니다.
+          files=$(gh api --paginate "$PR_FILES" --jq '.[] | .filename, (.previous_filename // empty)')
+          if [ -z "$files" ] || printf '%s\n' "$files" | grep -qvE '\.md$|^docs/|^\.githooks/|^fastlane/|^Gemfile(\.lock)?$|^scripts/'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Changes 잡이 실패하면 건너뛰지 않고 실행합니다.
   lint:
     name: SwiftLint
+    needs: changes
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: xcode-27
     timeout-minutes: 10
     steps:
@@ -23,54 +82,163 @@ jobs:
       - name: Lint
         run: make lint
 
-  xcode:
-    # fail-fast로 한쪽이 실패하면 진행 중인 나머지 잡을 즉시 취소합니다. 잡 이름은 필수 상태 체크 이름과 같아야 합니다.
-    name: ${{ matrix.name }}
+  # 앱, 익스텐션, 테스트 타깃을 한 번 컴파일해 Test 잡에 넘깁니다.
+  # develop 실행은 패키지와 컴파일 캐시를 저장하려고 빌드합니다.
+  build:
+    # 잡 이름은 필수 상태 체크 이름과 같아야 합니다.
+    name: Build
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: xcode-27
-    timeout-minutes: ${{ matrix.timeout }}
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - name: Build
-            target: build
-            timeout: 20
-          - name: Test
-            target: test
-            timeout: 25
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
 
-      - name: Build
-        if: matrix.target == 'build'
-        run: make build XCODEBUILD_FLAGS=-skipMacroValidation
+      - name: Read Xcode version
+        id: xcode
+        run: echo "version=$(xcodebuild -version | tr '\n ' '--')" >> "$GITHUB_OUTPUT"
+
+      # 키가 없을 때만 develop 실행이 저장합니다.
+      - name: Restore packages
+        id: packages
+        uses: actions/cache/restore@v6
+        with:
+          path: /tmp/plyst-derived-data/SourcePackages
+          key: packages-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('Plyst/Plyst.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
+      # develop 실행은 처음부터 빌드해 커밋마다 저장하고 PR은 가장 최근 develop 캐시를 읽기만 합니다.
+      - name: Restore compilation cache
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/compilation-cache
+          key: compilation-cache-${{ runner.os }}-${{ steps.xcode.outputs.version }}-arm64-${{ github.sha }}
+          restore-keys: |
+            compilation-cache-${{ runner.os }}-${{ steps.xcode.outputs.version }}-arm64-
+
+      - name: Build for testing
+        timeout-minutes: 15
+        run: make test-build XCODEBUILD_FLAGS="$BUILD_FLAGS COMPILATION_CACHE_CAS_PATH=$RUNNER_TEMP/compilation-cache"
+
+      # 테스트 실행에 필요한 xctestrun과 번들만 담습니다.
+      # 매크로 호스트 빌드와 오브젝트 파일은 Test 잡에서 쓰지 않습니다.
+      - name: Archive test products
+        if: github.event_name == 'pull_request'
+        working-directory: /tmp/plyst-derived-data/Build/Products
+        run: |
+          tar -cf "$RUNNER_TEMP/test-products.tar" \
+            *.xctestrun \
+            Debug-iphonesimulator/Plyst.app \
+            Debug-iphonesimulator/ShareExtension.appex \
+            Debug-iphonesimulator/WidgetExtension.appex \
+            Debug-iphonesimulator/PackageFrameworks
+
+      # 잡 전체를 다시 실행하면 같은 이름의 앞 산출물을 덮습니다.
+      - name: Upload test products
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-products
+          path: ${{ runner.temp }}/test-products.tar
+          retention-days: 1
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Save packages
+        if: github.event_name == 'push' && steps.packages.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: /tmp/plyst-derived-data/SourcePackages
+          key: ${{ steps.packages.outputs.cache-primary-key }}
+
+      - name: Save compilation cache
+        if: github.event_name == 'push'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/compilation-cache
+          key: compilation-cache-${{ runner.os }}-${{ steps.xcode.outputs.version }}-arm64-${{ github.sha }}
+
+  # Build 잡이 성공한 뒤 산출물을 받아 테스트만 실행합니다.
+  # 러너가 한 대만 배정되면 먼저 시작한 Test 잡이 러너를 잡고 Build 잡을 기다리게 되므로 Build 잡 뒤에 시작합니다.
+  test:
+    # 잡 이름은 필수 상태 체크 이름과 같아야 합니다.
+    name: Test
+    needs: [changes, build]
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.build.result == 'success' }}
+    runs-on: xcode-27
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
 
       - name: Select simulator
-        if: matrix.target == 'test'
         timeout-minutes: 2
         run: echo "TEST_DEVICE_ID=$(make -s test-device-id)" >> "$GITHUB_ENV"
 
-      # 시뮬레이터를 빌드와 겹쳐 기동했을 때 빌드가 12분 안에 끝나지 않은 사례가 있어 시뮬레이터는 빌드 이후에 기동합니다.
-      - name: Build for testing
-        if: matrix.target == 'test'
-        timeout-minutes: 12
-        run: make test-build DESTINATION="platform=iOS Simulator,id=$TEST_DEVICE_ID" XCODEBUILD_FLAGS=-skipMacroValidation
+      # simslim은 부팅과 테스트 시간을 줄이는 최적화이고 테스트는 simslim이 끄는 데몬에 의존하지 않습니다.
+      # 설치나 적용이 실패하면 경고만 남기고 기본 상태 시뮬레이터로 진행합니다.
+      - name: Install simslim
+        id: simslim
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          SIMSLIM_VERSION: 0.12.2
+          SIMSLIM_SHA256: b47302da6fb83b8b4c21f4fdd61507469770c07b0ff07fd1f48207bda4270887
+        run: |
+          archive="$RUNNER_TEMP/simslim.tar.gz"
+          directory="$RUNNER_TEMP/simslim"
+          mkdir -p "$directory"
+          if curl -fsSL --retry 3 -o "$archive" "https://github.com/MobAI-App/simslim/releases/download/v$SIMSLIM_VERSION/simslim-v$SIMSLIM_VERSION-macos-arm64.tar.gz" \
+            && echo "$SIMSLIM_SHA256  $archive" | shasum -a 256 -c - \
+            && tar -xzf "$archive" -C "$directory" simslim \
+            && "$directory/simslim" --version; then
+            echo "path=$directory/simslim" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning title=simslim::설치에 실패해 기본 상태 시뮬레이터로 진행합니다."
+          fi
+
+      # 종료 상태의 시뮬레이터에 적용하면 simslim이 비활성화 목록을 기록한 뒤 한 번만 부팅합니다.
+      # 제한 시간이 지나도 진행 중인 부팅은 다음 단계가 기다립니다.
+      - name: Slim simulator
+        if: steps.simslim.outputs.path != ''
+        continue-on-error: true
+        timeout-minutes: 4
+        env:
+          SIMSLIM: ${{ steps.simslim.outputs.path }}
+          SIMSLIM_BOOT_TIMEOUT: 3m
+        run: |
+          if "$SIMSLIM" on "$TEST_DEVICE_ID"; then
+            "$SIMSLIM" status "$TEST_DEVICE_ID" || true
+          else
+            echo "::warning title=simslim::적용에 실패해 기본 상태 시뮬레이터로 진행합니다."
+          fi
 
       - name: Boot simulator
-        if: matrix.target == 'test'
         timeout-minutes: 5
         run: |
-          xcrun simctl boot "$TEST_DEVICE_ID"
+          # 종료 상태가 아니면 부팅 명령을 보내지 않습니다.
+          if xcrun simctl list devices | grep "$TEST_DEVICE_ID" | grep -q "(Shutdown)"; then
+            xcrun simctl boot "$TEST_DEVICE_ID"
+          fi
           xcrun simctl bootstatus "$TEST_DEVICE_ID" -b
 
-      # 병렬 테스트는 복제 시뮬레이터 기동 지연과 멈춤의 원인으로 의심되어 CI에서만 끕니다.
+      - name: Download test products
+        uses: actions/download-artifact@v8
+        with:
+          name: test-products
+          path: ${{ runner.temp }}/test-products
+
+      - name: Extract test products
+        run: |
+          mkdir -p /tmp/plyst-derived-data/Build/Products
+          tar -C /tmp/plyst-derived-data/Build/Products -xf "$RUNNER_TEMP/test-products/test-products.tar"
+
+      # 테스트가 직렬로 15초 안팎에 끝나므로 복제 시뮬레이터를 추가로 부팅하는 병렬 테스트는 CI에서 끕니다.
       - name: Test
-        if: matrix.target == 'test'
         timeout-minutes: 9
-        run: make test-without-building XCODEBUILD_FLAGS="-skipMacroValidation -parallel-testing-enabled NO -skipPackageUpdates -disableAutomaticPackageResolution"
+        run: make test-prebuilt XCODEBUILD_FLAGS="-parallel-testing-enabled NO"
 
       - name: Test summary
-        if: always() && matrix.target == 'test'
+        if: always()
         timeout-minutes: 2
         run: |
           if [ -f /tmp/plyst-test-results.xcresult/Info.plist ]; then
@@ -78,7 +246,7 @@ jobs:
           fi
 
       - name: Simulator diagnostics
-        if: failure() && matrix.target == 'test'
+        if: failure()
         timeout-minutes: 3
         run: |
           xcrun simctl list devices

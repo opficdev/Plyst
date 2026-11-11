@@ -10,9 +10,10 @@ TEST_FLAGS ?= -test-timeouts-enabled YES \
 	-maximum-test-execution-time-allowance 120
 DERIVED_DATA_PATH ?= /tmp/plyst-derived-data
 XCODEBUILD_FLAGS ?=
+XCTESTRUN ?= $(firstword $(wildcard $(DERIVED_DATA_PATH)/Build/Products/*.xctestrun))
 MATCH_FORCE ?= false
 
-.PHONY: lint build test-build test-device-id test-without-building test verify deploy-setup deploy-check testflight-build testflight appstore-build appstore signing-sync
+.PHONY: lint build test-build test-device-id test-without-building test-prebuilt test verify deploy-setup deploy-check testflight-build testflight appstore-build appstore signing-sync
 
 lint:
 	mise exec -- swiftlint lint --strict --no-cache --config .swiftlint.yml Plyst/Plyst
@@ -54,6 +55,14 @@ test-without-building:
 		-derivedDataPath "$(DERIVED_DATA_PATH)" \
 		-resultBundlePath "$(RESULT_BUNDLE_PATH)" \
 		CODE_SIGNING_ALLOWED=NO \
+		test-without-building
+
+test-prebuilt:
+	rm -rf "$(RESULT_BUNDLE_PATH)"
+	xcodebuild $(XCODEBUILD_FLAGS) $(TEST_FLAGS) \
+		-xctestrun "$(XCTESTRUN)" \
+		-destination "$(TEST_DESTINATION)" \
+		-resultBundlePath "$(RESULT_BUNDLE_PATH)" \
 		test-without-building
 
 test:
