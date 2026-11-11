@@ -40,3 +40,4 @@ fastlane/test_output/
 fastlane/logs/
 fastlane/testflight_build/
 fastlane/appstore_build/
+fastlane/secrets.json
