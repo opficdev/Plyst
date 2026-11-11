@@ -11,11 +11,13 @@ concurrency:
 permissions:
   contents: read
 
+# 시뮬레이터 x86_64 슬라이스는 CI에서 만들지 않습니다.
 env:
   BUILD_FLAGS: >-
     -skipMacroValidation
     -skipPackageUpdates
     -disableAutomaticPackageResolution
+    ARCHS=arm64
 
 jobs:
   lint:
