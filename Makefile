@@ -10,8 +10,9 @@ TEST_FLAGS ?= -test-timeouts-enabled YES \
 	-maximum-test-execution-time-allowance 120
 DERIVED_DATA_PATH ?= /tmp/plyst-derived-data
 XCODEBUILD_FLAGS ?=
+MATCH_FORCE ?= false
 
-.PHONY: lint build test-build test-device-id test-without-building test verify
+.PHONY: lint build test-build test-device-id test-without-building test verify deploy-setup deploy-check testflight-build testflight appstore-build appstore signing-sync
 
 lint:
 	mise exec -- swiftlint lint --strict --no-cache --config .swiftlint.yml Plyst/Plyst
@@ -60,3 +61,26 @@ test:
 	$(MAKE) test-without-building
 
 verify: lint build test-build
+
+deploy-setup:
+	bundle config set --local path vendor/bundle
+	bundle install
+	test -f fastlane/secrets.json || cp fastlane/secrets.example.json fastlane/secrets.json
+
+deploy-check:
+	scripts/deploy-local.sh check
+
+testflight-build:
+	scripts/deploy-local.sh testflight_build_only
+
+testflight:
+	scripts/deploy-local.sh deploy_testflight
+
+appstore-build:
+	scripts/deploy-local.sh appstore_build_only
+
+appstore:
+	scripts/deploy-local.sh deploy_appstore
+
+signing-sync:
+	MATCH_FORCE="$(MATCH_FORCE)" scripts/deploy-local.sh sync_appstore_profiles
