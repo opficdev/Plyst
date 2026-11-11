@@ -101,7 +101,7 @@ jobs:
       # 키가 없을 때만 develop 실행이 저장합니다.
       - name: Restore packages
         id: packages
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: /tmp/plyst-derived-data/SourcePackages
           key: packages-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('Plyst/Plyst.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
@@ -109,7 +109,7 @@ jobs:
       # develop 실행은 처음부터 빌드해 커밋마다 저장하고 PR은 가장 최근 develop 캐시를 읽기만 합니다.
       - name: Restore compilation cache
         if: github.event_name == 'pull_request'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ runner.temp }}/compilation-cache
           key: compilation-cache-${{ runner.os }}-${{ steps.xcode.outputs.version }}-arm64-${{ github.sha }}
@@ -136,7 +136,7 @@ jobs:
       # 잡 전체를 다시 실행하면 같은 이름의 앞 산출물을 덮습니다.
       - name: Upload test products
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-products
           path: ${{ runner.temp }}/test-products.tar
@@ -146,14 +146,14 @@ jobs:
 
       - name: Save packages
         if: github.event_name == 'push' && steps.packages.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: /tmp/plyst-derived-data/SourcePackages
           key: ${{ steps.packages.outputs.cache-primary-key }}
 
       - name: Save compilation cache
         if: github.event_name == 'push'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ${{ runner.temp }}/compilation-cache
           key: compilation-cache-${{ runner.os }}-${{ steps.xcode.outputs.version }}-arm64-${{ github.sha }}
@@ -222,7 +222,7 @@ jobs:
           xcrun simctl bootstatus "$TEST_DEVICE_ID" -b
 
       - name: Download test products
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: test-products
           path: ${{ runner.temp }}/test-products
