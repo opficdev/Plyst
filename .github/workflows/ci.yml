@@ -157,18 +157,15 @@ jobs:
           path: ${{ runner.temp }}/compilation-cache
           key: compilation-cache-${{ runner.os }}-${{ steps.xcode.outputs.version }}-arm64-${{ github.sha }}
 
-  # Build 잡을 기다리지 않고 시작해 시뮬레이터를 먼저 부팅합니다.
-  # 빌드는 다른 러너에서 진행되므로 이 러너에서는 부팅과 빌드가 겹치지 않습니다.
+  # Build 잡이 성공한 뒤 산출물을 받아 테스트만 실행합니다.
+  # 러너가 한 대만 배정되면 먼저 시작한 Test 잡이 러너를 잡고 Build 잡을 기다리게 되므로 Build 잡 뒤에 시작합니다.
   test:
     # 잡 이름은 필수 상태 체크 이름과 같아야 합니다.
     name: Test
-    needs: changes
-    if: ${{ !cancelled() && github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    needs: [changes, build]
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.build.result == 'success' }}
     runs-on: xcode-27
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      actions: read
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
 
@@ -222,35 +219,6 @@ jobs:
             xcrun simctl boot "$TEST_DEVICE_ID"
           fi
           xcrun simctl bootstatus "$TEST_DEVICE_ID" -b
-
-      # Build 잡의 산출물이 올라오면 끝납니다.
-      # Build 잡이 산출물 없이 끝나면 실패로 끝납니다.
-      # API 호출이 일시적으로 실패하면 다음 확인까지 기다립니다.
-      - name: Wait for test products
-        timeout-minutes: 20
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          run="repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          while :; do
-            if ! names=$(gh api "$run/artifacts" --jq '.artifacts[].name'); then
-              sleep 10
-              continue
-            fi
-            if printf '%s\n' "$names" | grep -qx test-products; then
-              break
-            fi
-            if ! failed=$(gh api "$run/attempts/$GITHUB_RUN_ATTEMPT/jobs" --paginate \
-              --jq '.jobs[] | select(.name == "Build" and .status == "completed" and .conclusion != "success") | .name'); then
-              sleep 10
-              continue
-            fi
-            if [ -n "$failed" ]; then
-              printf '::error title=산출물 대기::Build 잡이 산출물 없이 끝났습니다.\n'
-              exit 1
-            fi
-            sleep 10
-          done
 
       - name: Download test products
         uses: actions/download-artifact@v4
