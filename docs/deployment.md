@@ -25,9 +25,11 @@
 - Xcode 27 (`xcodebuild -version`으로 확인)
 	- 설치 후 라이선스 동의와 `sudo xcodebuild -runFirstLaunch` 필요
 	- `xcode-select`가 Xcode 27을 가리켜야 함
-- Ruby와 Bundler
+- Ruby 3.2 이상과 Bundler
+	- `Gemfile.lock`의 Bundler 2.7.2가 Ruby 3.2 이상을 요구함
 - 시크릿 값
 	- 저장소 밖 경로로 안전하게 옮겨 와야 함
+- 실행 환경
 	- 로그인 키체인이 잠금 해제된 GUI 세션에서 실행해야 함
 
 ### `make deploy-setup`
@@ -72,7 +74,8 @@ make deploy-check
 ```
 
 - 읽기만 하며 시크릿 값과 인증 헤더를 출력하지 않고 파일과 키체인을 바꾸지 않음
-- 실패한 항목을 모두 출력한 뒤 종료
+- 시크릿 파일이 없거나 JSON이 올바르지 않거나 키가 비어 있으면 나머지 항목을 확인하지 않고 바로 종료
+- 시크릿 파일이 통과하면 나머지 항목을 모두 확인하고 실패한 항목을 모두 출력한 뒤 종료
 - 확인하는 항목
 	- Xcode 27 선택 여부와 첫 실행 설정
 	- Ruby gem 설치 여부
