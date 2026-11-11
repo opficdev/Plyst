@@ -1,7 +1,11 @@
 name: iOS CI
 
+# develop 푸시는 PR이 읽을 캐시를 만드는 실행입니다.
 on:
   pull_request:
+  push:
+    branches:
+      - develop
 
 # 같은 PR이나 브랜치에 새 푸시가 오면 진행 중인 앞 실행을 취소합니다.
 concurrency:
@@ -12,16 +16,21 @@ permissions:
   contents: read
 
 # 시뮬레이터 x86_64 슬라이스는 CI에서 만들지 않습니다.
+# 컴파일 결과는 러너 임시 폴더의 CAS에 캐시합니다.
 env:
   BUILD_FLAGS: >-
     -skipMacroValidation
     -skipPackageUpdates
     -disableAutomaticPackageResolution
     ARCHS=arm64
+    COMPILATION_CACHE_ENABLE_CACHING=YES
+    SWIFT_ENABLE_EXPLICIT_MODULES=YES
+    COMPILER_INDEX_STORE_ENABLE=NO
 
 jobs:
   lint:
     name: SwiftLint
+    if: github.event_name == 'pull_request'
     runs-on: xcode-27
     timeout-minutes: 10
     steps:
@@ -37,6 +46,7 @@ jobs:
         run: make lint
 
   # 앱, 익스텐션, 테스트 타깃을 한 번 컴파일해 Test 잡에 넘깁니다.
+  # develop 실행은 패키지와 컴파일 캐시를 저장하려고 빌드합니다.
   build:
     # 잡 이름은 필수 상태 체크 이름과 같아야 합니다.
     name: Build
@@ -45,13 +55,36 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Read Xcode version
+        id: xcode
+        run: echo "version=$(xcodebuild -version | tr '\n ' '--')" >> "$GITHUB_OUTPUT"
+
+      # 키가 없을 때만 develop 실행이 저장합니다.
+      - name: Restore packages
+        id: packages
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/plyst-derived-data/SourcePackages
+          key: packages-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('Plyst/Plyst.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
+      # develop 실행은 처음부터 빌드해 커밋마다 저장하고 PR은 가장 최근 develop 캐시를 읽기만 합니다.
+      - name: Restore compilation cache
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/compilation-cache
+          key: compilation-cache-${{ runner.os }}-${{ steps.xcode.outputs.version }}-arm64-${{ github.sha }}
+          restore-keys: |
+            compilation-cache-${{ runner.os }}-${{ steps.xcode.outputs.version }}-arm64-
+
       - name: Build for testing
         timeout-minutes: 15
-        run: make test-build XCODEBUILD_FLAGS="$BUILD_FLAGS"
+        run: make test-build XCODEBUILD_FLAGS="$BUILD_FLAGS COMPILATION_CACHE_CAS_PATH=$RUNNER_TEMP/compilation-cache"
 
       # 테스트 실행에 필요한 xctestrun과 번들만 담습니다.
       # 매크로 호스트 빌드와 오브젝트 파일은 Test 잡에서 쓰지 않습니다.
       - name: Archive test products
+        if: github.event_name == 'pull_request'
         working-directory: /tmp/plyst-derived-data/Build/Products
         run: |
           tar -cf "$RUNNER_TEMP/test-products.tar" \
@@ -63,6 +96,7 @@ jobs:
 
       # 잡 전체를 다시 실행하면 같은 이름의 앞 산출물을 덮습니다.
       - name: Upload test products
+        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: test-products
@@ -71,11 +105,26 @@ jobs:
           if-no-files-found: error
           overwrite: true
 
+      - name: Save packages
+        if: github.event_name == 'push' && steps.packages.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/plyst-derived-data/SourcePackages
+          key: ${{ steps.packages.outputs.cache-primary-key }}
+
+      - name: Save compilation cache
+        if: github.event_name == 'push'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/compilation-cache
+          key: compilation-cache-${{ runner.os }}-${{ steps.xcode.outputs.version }}-arm64-${{ github.sha }}
+
   # Build 잡을 기다리지 않고 시작해 시뮬레이터를 먼저 부팅합니다.
   # 빌드는 다른 러너에서 진행되므로 이 러너에서는 부팅과 빌드가 겹치지 않습니다.
   test:
     # 잡 이름은 필수 상태 체크 이름과 같아야 합니다.
     name: Test
+    if: github.event_name == 'pull_request'
     runs-on: xcode-27
     timeout-minutes: 30
     permissions:
