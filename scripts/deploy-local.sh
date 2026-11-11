@@ -90,7 +90,7 @@ if [ "$lane" = check ]; then
 fi
 
 if ! (cd "$repository_root" && bundle check >/dev/null 2>&1); then
-	printf '오류: Bundler gem이 설치되어 있지 않습니다. 저장소 루트에서 bundle install을 실행하세요.\n' >&2
+	printf '오류: Bundler gem이 설치되어 있지 않습니다. make deploy-setup을 실행하세요.\n' >&2
 	exit 1
 fi
 
@@ -116,8 +116,10 @@ trap 'exit 143' TERM
 
 # 프로파일 동기화는 앱을 빌드하지 않으므로 프로젝트 파일을 다루지 않는다.
 if [ "$lane" != sync_appstore_profiles ]; then
-	project_backup=$(mktemp)
-	cp "$project_file" "$project_backup"
+	backup_file=$(mktemp)
+	cp "$project_file" "$backup_file"
+	# 복사가 끝난 백업만 cleanup이 원복에 쓴다.
+	project_backup=$backup_file
 fi
 
 (
