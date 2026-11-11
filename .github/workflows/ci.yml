@@ -6,6 +6,14 @@ on:
   push:
     branches:
       - develop
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.githooks/**'
+      - 'fastlane/**'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - 'scripts/**'
 
 # 같은 PR이나 브랜치에 새 푸시가 오면 진행 중인 앞 실행을 취소합니다.
 concurrency:
@@ -28,9 +36,37 @@ env:
     COMPILER_INDEX_STORE_ENABLE=NO
 
 jobs:
+  # CI가 실행하지 않는 파일만 바뀐 PR은 SwiftLint, Build, Test를 건너뜁니다.
+  # 건너뛴 필수 체크는 통과로 처리되므로 트리거 경로 조건 대신 잡 조건을 씁니다.
+  # macOS 동시 실행 수를 아끼려고 Linux에서 실행합니다.
+  changes:
+    name: Changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Detect code changes
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_FILES: repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files
+        run: |
+          files=$(gh api --paginate "$PR_FILES" --jq '.[].filename')
+          if [ -z "$files" ] || printf '%s\n' "$files" | grep -qvE '\.md$|^docs/|^\.githooks/|^fastlane/|^Gemfile(\.lock)?$|^scripts/'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Changes 잡이 실패하면 건너뛰지 않고 실행합니다.
   lint:
     name: SwiftLint
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: xcode-27
     timeout-minutes: 10
     steps:
@@ -50,6 +86,8 @@ jobs:
   build:
     # 잡 이름은 필수 상태 체크 이름과 같아야 합니다.
     name: Build
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: xcode-27
     timeout-minutes: 20
     steps:
@@ -124,7 +162,8 @@ jobs:
   test:
     # 잡 이름은 필수 상태 체크 이름과 같아야 합니다.
     name: Test
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: xcode-27
     timeout-minutes: 30
     permissions:
