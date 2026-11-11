@@ -1,8 +1,5 @@
 ## AI
 docs/superpowers
-.agents/specs/*
-!.agents/specs/README.md
-.agents/plans/
 
 # macOS
 .DS_Store
