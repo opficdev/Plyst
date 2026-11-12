@@ -99,10 +99,13 @@ extension SQLiteClipRecord {
     /// 별도의 DatabaseMigrator를 만들면 hasBeenSuperseded 판정으로 기존 저장소가 corruptedData가 되므로, 새 마이그레이션은 이 목록 끝에 추가합니다.
     static func migrate(_ database: DatabaseQueue) throws {
         var migrator = DatabaseMigrator()
+        // React Native 버전이 새로 만든 DB에는 grdb_migrations 없이 표만 있으므로 기존 표를 다시 만들지 않습니다.
         migrator.registerMigration("CreateClips") { connection in
+            guard try !connection.tableExists(tableName) else { return }
             try createTable(in: connection)
         }
         migrator.registerMigration("CreateClipSearchTerms") { connection in
+            guard try !connection.tableExists(SQLiteClipSearchTermRecord.tableName) else { return }
             try SQLiteClipSearchTermRecord.createTable(in: connection)
         }
         if try database.read({ try migrator.hasBeenSuperseded($0) }) {
