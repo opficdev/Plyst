@@ -95,14 +95,18 @@ extension SQLiteClipRecord {
         )
     }
 
-    /// clips.sqlite의 모든 스키마 마이그레이션을 이 마이그레이터 하나에 등록합니다.
-    /// 별도의 DatabaseMigrator를 만들면 hasBeenSuperseded 판정으로 기존 저장소가 corruptedData가 되므로, 새 마이그레이션은 이 목록 끝에 추가합니다.
+    /// clips.sqlite와 ShareInbox.sqlite의 스키마 마이그레이션을 이 마이그레이터 하나에 등록합니다.
+    /// 별도의 DatabaseMigrator를 만들면 hasBeenSuperseded 판정으로 기존 저장소가 corruptedData가 됩니다.
+    /// React Native 버전은 CreateClips와 CreateClipSearchTerms 외의 식별자를 손상으로 판단합니다. 새 마이그레이션 식별자를 추가하지 않고 열 구성으로 대상을 판정하여 스키마를 변환합니다.
     static func migrate(_ database: DatabaseQueue) throws {
         var migrator = DatabaseMigrator()
         // React Native 버전이 새로 만든 DB에는 grdb_migrations 없이 표만 있으므로 기존 표를 다시 만들지 않습니다.
         migrator.registerMigration("CreateClips") { connection in
             guard try !connection.tableExists(tableName) else { return }
-            try createTable(in: connection)
+            try createTable(
+                named: tableName,
+                in: connection
+            )
         }
         migrator.registerMigration("CreateClipSearchTerms") { connection in
             guard try !connection.tableExists(SQLiteClipSearchTermRecord.tableName) else { return }
@@ -112,11 +116,54 @@ extension SQLiteClipRecord {
             throw ClipStorageError.corruptedData
         }
         try migrator.migrate(database)
+        try convertPinColumn(in: database)
     }
 
-    private static func createTable(in connection: Database) throws {
+    /// isPinned 열로 만든 clips 표를 React Native 버전과 같은 pinnedAt 열로 재구성합니다.
+    /// 기존 DB는 고정한 시각을 기록하지 않았으므로 고정된 클립의 pinnedAt에는 createdAt을 넣습니다.
+    /// 재구성은 쓰기 트랜잭션 하나에서 수행합니다. 실패하면 기존 표가 그대로 남습니다.
+    private static func convertPinColumn(in database: DatabaseQueue) throws {
+        // 열 때마다 쓰기 잠금을 잡지 않도록 읽기로 먼저 판정합니다.
+        guard try database.read({ try hasIsPinnedColumn(in: $0) }) else { return }
+        try database.write { connection in
+            // ShareInbox.sqlite는 다른 프로세스가 먼저 변환할 수 있어 쓰기 잠금 안에서 다시 판정합니다.
+            guard try hasIsPinnedColumn(in: connection) else { return }
+            let rebuiltTableName = "\(tableName)Rebuilt"
+            try createTable(
+                named: rebuiltTableName,
+                in: connection
+            )
+            try connection.execute(sql: """
+                INSERT INTO "\(rebuiltTableName)" (
+                    "id", "kind", "text", "imageFileID", "imageContentType", "pixelWidth", "pixelHeight",
+                    "byteCount", "name", "pinnedAt", "memo", "createdAt", "lastUsedAt"
+                )
+                SELECT
+                    "id", "kind", "text", "imageFileID", "imageContentType", "pixelWidth", "pixelHeight",
+                    "byteCount", "name", CASE WHEN "isPinned" = 1 THEN "createdAt" END, "memo", "createdAt", "lastUsedAt"
+                FROM "\(tableName)"
+                """)
+            try connection.drop(table: tableName)
+            try connection.rename(table: rebuiltTableName, to: tableName)
+        }
+    }
+
+    /// GRDB 스키마 캐시를 거치지 않도록 pragma_table_info를 직접 조회합니다.
+    private static func hasIsPinnedColumn(in connection: Database) throws -> Bool {
+        let names = try Set(String.fetchAll(
+            connection,
+            sql: "SELECT name FROM pragma_table_info(?)",
+            arguments: [tableName]
+        ))
+        return names.contains("isPinned") && !names.contains(columns.pinnedAt.name)
+    }
+
+    private static func createTable(
+        named name: String,
+        in connection: Database
+    ) throws {
         let columns = Self.columns
-        try connection.create(table: tableName, options: .strict) { table in
+        try connection.create(table: name, options: .strict) { table in
             table.column(columns.id.name, .text).primaryKey().notNull()
             table.column(columns.kind.name, .text).notNull().check {
                 $0 == ContentKind.text.rawValue || $0 == ContentKind.image.rawValue

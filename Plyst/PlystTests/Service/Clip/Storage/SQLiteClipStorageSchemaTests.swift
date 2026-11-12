@@ -37,6 +37,54 @@ final class SQLiteClipStorageSchemaTests: XCTestCase {
         XCTAssertEqual(try fetchPinnedAt(), [nil])
     }
 
+    func testIsPinnedSchemaIsConvertedWithoutNewMigrationIdentifiers() async throws {
+        let pinned = Clip(
+            content: .text("고정"),
+            isPinned: true,
+            createdAt: Date(timeIntervalSinceReferenceDate: 300)
+        )
+        let image = Clip(content: .image(ClipImageMetadata(
+            fileID: UUID(),
+            contentType: "public.png",
+            pixelWidth: 640,
+            pixelHeight: 480,
+            byteCount: 4096
+        )))
+        let storage = try SQLiteClipStorageService(databaseURL: url)
+        try await storage.insert(pinned)
+        try await storage.insert(image)
+        _ = try await storage.recordSearchTerm(XCTUnwrap(ClipSearchQuery("검색어")))
+        let schema = try fetchClipsSchema()
+        XCTAssertEqual(try fetchPinColumns(), ["pinnedAt"])
+        try execute(Self.isPinnedSchemaSQL)
+        XCTAssertEqual(try fetchPinColumns(), ["isPinned"])
+
+        let converted = try SQLiteClipStorageService(databaseURL: url)
+        let clips = try await converted.fetchAll(order: .createdAt)
+        let history = try await converted.fetchSearchHistory()
+        XCTAssertEqual(clips, [image, pinned])
+        XCTAssertEqual(history.terms, ["검색어"])
+        XCTAssertEqual(try fetchPinnedAt(), [300, nil])
+        XCTAssertEqual(try fetchClipsSchema(), schema)
+        XCTAssertEqual(try fetchMigrationIdentifiers(), ["CreateClipSearchTerms", "CreateClips"])
+
+        _ = try SQLiteClipStorageService(databaseURL: url)
+        XCTAssertEqual(try fetchClipsSchema(), schema)
+        XCTAssertEqual(try fetchPinnedAt(), [300, nil])
+    }
+
+    func testFailedPinColumnConversionPreservesIsPinnedSchema() async throws {
+        let storage = try SQLiteClipStorageService(databaseURL: url)
+        try await storage.insert(Clip(content: .text("고정"), isPinned: true))
+        try execute(Self.isPinnedSchemaSQL)
+        try execute(#"CREATE TABLE "clipsRebuilt" ("id" TEXT)"#)
+        XCTAssertThrowsError(try SQLiteClipStorageService(databaseURL: url)) {
+            XCTAssertEqual($0 as? ClipStorageError, .writeFailed)
+        }
+        XCTAssertEqual(try fetchPinColumns(), ["isPinned"])
+        XCTAssertEqual(try read { try String.fetchAll($0, sql: "SELECT text FROM clips") }, ["고정"])
+    }
+
     func testStoreWithoutMigrationTableOpensAndKeepsUserVersion() async throws {
         let clip = Clip(content: .text("고정"), isPinned: true)
         let storage = try SQLiteClipStorageService(databaseURL: url)
@@ -68,7 +116,45 @@ final class SQLiteClipStorageSchemaTests: XCTestCase {
         try read { try Double?.fetchAll($0, sql: "SELECT pinnedAt FROM clips ORDER BY createdAt") }
     }
 
+    private func fetchPinColumns() throws -> [String] {
+        try read {
+            try String.fetchAll(
+                $0,
+                sql: "SELECT name FROM pragma_table_info('clips') WHERE name IN ('isPinned', 'pinnedAt')"
+            )
+        }
+    }
+
+    private func fetchClipsSchema() throws -> String? {
+        try read { try String.fetchOne($0, sql: "SELECT sql FROM sqlite_master WHERE name = 'clips'") }
+    }
+
     private func fetchMigrationIdentifiers() throws -> [String] {
         try read { try String.fetchAll($0, sql: "SELECT identifier FROM grdb_migrations ORDER BY identifier") }
     }
+
+    /// pinnedAt 열을 도입하기 전의 clips 표로 되돌립니다.
+    private static let isPinnedSchemaSQL = """
+        CREATE TABLE "clipsLegacy" (
+            "id" TEXT PRIMARY KEY NOT NULL,
+            "kind" TEXT NOT NULL,
+            "text" TEXT,
+            "imageFileID" TEXT,
+            "imageContentType" TEXT,
+            "pixelWidth" INTEGER,
+            "pixelHeight" INTEGER,
+            "byteCount" INTEGER,
+            "name" TEXT,
+            "isPinned" INTEGER NOT NULL CHECK (("isPinned" = 0) OR ("isPinned" = 1)),
+            "memo" TEXT,
+            "createdAt" REAL NOT NULL,
+            "lastUsedAt" REAL
+        ) STRICT;
+        INSERT INTO "clipsLegacy"
+        SELECT "id", "kind", "text", "imageFileID", "imageContentType", "pixelWidth", "pixelHeight",
+            "byteCount", "name", "pinnedAt" IS NOT NULL, "memo", "createdAt", "lastUsedAt"
+        FROM "clips";
+        DROP TABLE "clips";
+        ALTER TABLE "clipsLegacy" RENAME TO "clips";
+        """
 }
