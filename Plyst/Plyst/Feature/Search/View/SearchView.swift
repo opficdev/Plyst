@@ -214,7 +214,8 @@ final class SearchView: UIView, SearchViewLike, ClipGridLike {
         cancelButton.configuration = Self.makeButtonConfiguration(symbol: "magnifyingglass")
 
         collectionView.backgroundColor = .clear
-        collectionView.contentInsetAdjustmentBehavior = .never
+        // 키보드가 내려가 목록이 홈 인디케이터 영역까지 이어질 때만 하단 safe area만큼 여백이 더해진다.
+        collectionView.contentInsetAdjustmentBehavior = .scrollableAxes
         collectionView.alwaysBounceVertical = true
         collectionView.keyboardDismissMode = .onDrag
         collectionView.contentInset.bottom = 16
@@ -259,6 +260,8 @@ final class SearchView: UIView, SearchViewLike, ClipGridLike {
         // 서치바 입력 필드는 접힌 너비에서 제약이 깨져도 되도록 trailing 우선순위를 낮춘다.
         let fieldTrailing = searchField.trailingAnchor.constraint(equalTo: fieldContainer.trailingAnchor, constant: -12)
         fieldTrailing.priority = .defaultHigh
+        // 키보드가 내려가면 가이드 상단이 화면 하단에 놓여 목록이 홈 인디케이터 영역까지 이어진다.
+        keyboardLayoutGuide.usesBottomSafeArea = false
 
         NSLayoutConstraint.activate([
             backdrop.topAnchor.constraint(equalTo: topAnchor),
@@ -297,7 +300,8 @@ final class SearchView: UIView, SearchViewLike, ClipGridLike {
             recentView.trailingAnchor.constraint(equalTo: collectionView.trailingAnchor),
             recentView.bottomAnchor.constraint(equalTo: collectionView.bottomAnchor),
             emptyState.centerXAnchor.constraint(equalTo: collectionView.centerXAnchor),
-            emptyState.centerYAnchor.constraint(equalTo: collectionView.centerYAnchor),
+            // 홈 인디케이터 영역을 제외한 목록 영역의 중앙에 놓아 키보드가 내려가도 기존 위치를 유지한다.
+            emptyState.centerYAnchor.constraint(equalTo: collectionView.safeAreaLayoutGuide.centerYAnchor),
             emptyState.leadingAnchor.constraint(greaterThanOrEqualTo: collectionView.leadingAnchor, constant: 40),
             emptyState.trailingAnchor.constraint(lessThanOrEqualTo: collectionView.trailingAnchor, constant: -40)
         ])
