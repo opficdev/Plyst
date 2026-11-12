@@ -21,7 +21,9 @@ struct SQLiteClipRecord: Sendable {
     var pixelHeight: Int?
     var byteCount: Int?
     var name: String?
-    var isPinned: Int
+    /// 고정한 시각입니다. 새로 고정하면 저장하는 시점의 시각을 기록합니다.
+    /// 고정을 유지하는 수정에서는 기존 값을 보존하고 고정을 해제하면 nil입니다. 고정 여부는 이 값의 유무로 판단합니다.
+    var pinnedAt: Double?
     var memo: String?
     var createdAt: Double
     var lastUsedAt: Double?
@@ -34,10 +36,18 @@ struct SQLiteClipRecord: Sendable {
 
 extension SQLiteClipRecord {
 
-    init(_ clip: Clip) {
+    /// pinnedAt은 고정된 클립에만 저장합니다. 고정 여부는 clip.isPinned만 따릅니다.
+    init(
+        _ clip: Clip,
+        pinnedAt: Double
+    ) {
         self.init(
-            id: clip.id, kind: .text, name: clip.name, isPinned: clip.isPinned ? 1 : 0,
-            memo: clip.memo, createdAt: clip.createdAt.timeIntervalSinceReferenceDate,
+            id: clip.id,
+            kind: .text,
+            name: clip.name,
+            pinnedAt: clip.isPinned ? pinnedAt : nil,
+            memo: clip.memo,
+            createdAt: clip.createdAt.timeIntervalSinceReferenceDate,
             lastUsedAt: clip.lastUsedAt?.timeIntervalSinceReferenceDate
         )
         switch clip.content {
@@ -71,11 +81,15 @@ extension SQLiteClipRecord {
                 pixelWidth: pixelWidth, pixelHeight: pixelHeight, byteCount: byteCount
             ))
         }
-        guard content.isValid, createdAt.isFinite, lastUsedAt?.isFinite != false, isPinned == 0 || isPinned == 1 else {
+        guard content.isValid, createdAt.isFinite, lastUsedAt?.isFinite != false, pinnedAt?.isFinite != false else {
             throw ClipStorageError.corruptedData
         }
         return Clip(
-            id: id, content: content, name: name, isPinned: isPinned == 1, memo: memo,
+            id: id,
+            content: content,
+            name: name,
+            isPinned: pinnedAt != nil,
+            memo: memo,
             createdAt: Date(timeIntervalSinceReferenceDate: createdAt),
             lastUsedAt: lastUsedAt.map { Date(timeIntervalSinceReferenceDate: $0) }
         )
@@ -111,7 +125,7 @@ extension SQLiteClipRecord {
             table.column(columns.pixelHeight.name, .integer)
             table.column(columns.byteCount.name, .integer)
             table.column(columns.name.name, .text)
-            table.column(columns.isPinned.name, .integer).notNull().check { $0 == 0 || $0 == 1 }
+            table.column(columns.pinnedAt.name, .real)
             table.column(columns.memo.name, .text)
             table.column(columns.createdAt.name, .real).notNull()
             table.column(columns.lastUsedAt.name, .real)

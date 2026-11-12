@@ -94,7 +94,8 @@ actor SQLiteClipStorageService: ClipStorageService {
                 guard try Self.fetch(id: clip.id, from: connection) == nil else {
                     throw ClipStorageError.duplicateID(clip.id)
                 }
-                try SQLiteClipRecord.insert { SQLiteClipRecord(clip) }.execute(connection)
+                let pinnedAt = Date().timeIntervalSinceReferenceDate
+                try SQLiteClipRecord.insert { SQLiteClipRecord(clip, pinnedAt: pinnedAt) }.execute(connection)
             }
         }
         Self.logger.info("클립 추가 완료: id \(clip.id.uuidString, privacy: .private(mask: .hash))")
@@ -104,13 +105,16 @@ actor SQLiteClipStorageService: ClipStorageService {
     func update(id: Clip.ID, change: ClipUpdate) throws -> Clip {
         let result = try access(fallback: .writeFailed) {
             try database.write { connection in
-                guard let current = try Self.fetch(id: id, from: connection) else {
+                guard let record = try Self.decode({ try SQLiteClipRecord.find(id).fetchOne(connection) }) else {
                     throw ClipStorageError.notFound(id)
                 }
+                let current = try Self.decode { try record.clip() }
                 let updated = change.applying(to: current)
                 guard updated != current else { return (clip: current, changed: false) }
                 try Self.validate(updated)
-                try SQLiteClipRecord.update(SQLiteClipRecord(updated)).execute(connection)
+                // 고정을 유지하면 기존 고정 시각을 보존합니다.
+                let pinnedAt = record.pinnedAt ?? Date().timeIntervalSinceReferenceDate
+                try SQLiteClipRecord.update(SQLiteClipRecord(updated, pinnedAt: pinnedAt)).execute(connection)
                 return (clip: updated, changed: true)
             }
         }
