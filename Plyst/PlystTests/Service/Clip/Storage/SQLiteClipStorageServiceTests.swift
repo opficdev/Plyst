@@ -163,7 +163,7 @@ final class SQLiteClipStorageServiceTests: XCTestCase {
             "UPDATE clips SET text = NULL WHERE kind = 'text'",
             "UPDATE clips SET imageFileID = 'file' WHERE kind = 'text'",
             "UPDATE clips SET createdAt = 'invalid'",
-            "UPDATE clips SET isPinned = 2",
+            "UPDATE clips SET pinnedAt = 'invalid'",
             "UPDATE clips SET text = 'text' WHERE kind = 'image'",
             "UPDATE clips SET imageFileID = NULL WHERE kind = 'image'",
             "UPDATE clips SET imageContentType = NULL WHERE kind = 'image'",
@@ -180,6 +180,14 @@ final class SQLiteClipStorageServiceTests: XCTestCase {
         let storedImage = try await storage.fetch(id: image.id)
         XCTAssertEqual(storedText, text)
         XCTAssertEqual(storedImage, image)
+    }
+
+    func testNonFinitePinnedAtIsReportedAsCorruptedData() async throws {
+        let storage = try SQLiteClipStorageService(databaseURL: url)
+        let clip = Clip(content: .text("원문"), isPinned: true)
+        try await storage.insert(clip)
+        try execute("UPDATE clips SET pinnedAt = 1e999")
+        await assertError(.corruptedData) { _ = try await storage.fetch(id: clip.id) }
     }
 
     func testUnknownStoredKindIsReportedAsCorruptedData() async throws {
